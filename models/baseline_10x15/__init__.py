@@ -77,6 +77,7 @@ def gradient_penalty(real, fake):
     grads = tf.reshape(t.gradient(d_int, interpolates), [len(real), -1])
     return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0)**2)
 
+@tf.function
 def calculate_losses(batch):
     fake = make_fake(len(batch))
     d_real = discriminator(batch)
@@ -91,25 +92,24 @@ def disc_step(batch):
 
     with tf.GradientTape() as t:
         losses = calculate_losses(batch)
-    loss_vals = {k : l.numpy() for k, l in losses.items()}
 
     grads = t.gradient(losses['disc_loss'], discriminator.trainable_variables)
     disc_opt.apply_gradients(zip(grads, discriminator.trainable_variables))
-    return loss_vals
+    return losses
 
 def gen_step(batch):
     batch = tf.convert_to_tensor(batch)
 
     with tf.GradientTape() as t:
         losses = calculate_losses(batch)
-    loss_vals = {k : l.numpy() for k, l in losses.items()}
 
     grads = t.gradient(losses['gen_loss'], generator.trainable_variables)
     gen_opt.apply_gradients(zip(grads, generator.trainable_variables))
-    return loss_vals
+    return losses
 
 step_counter = tf.Variable(0, dtype='int32', trainable=False)
 
+@tf.function
 def training_step(batch):
     if step_counter == NUM_DISC_UPDATES:
         result = gen_step(batch)
