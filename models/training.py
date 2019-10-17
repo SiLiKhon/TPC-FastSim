@@ -21,6 +21,7 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
         losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
 
+        print("", flush=True)
         print("Train losses:", losses_train)
         print("Val losses:", losses_val)
 
