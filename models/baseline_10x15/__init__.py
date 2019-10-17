@@ -108,7 +108,7 @@ def gen_step(batch):
     gen_opt.apply_gradients(zip(grads, generator.trainable_variables))
     return loss_vals
 
-step_counter = tf.Variable(0, dtype='int', trainable=False)
+step_counter = tf.Variable(0, dtype='int32', trainable=False)
 
 def training_step(batch):
     if step_counter == NUM_DISC_UPDATES:
