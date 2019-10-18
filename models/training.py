@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import trange
 
-def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size):
+def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size, train_writer=None, val_writer=None):
 
     losses_history = {}
 
@@ -20,6 +20,16 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
         losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
+        
+        if train_writer is not None:
+            with train_writer.as_default():
+                for k, l in losses_train.items():
+                    tf.summary.scalar(k, l, i_epoch)
+        
+        if val_writer is not None:
+            with val_writer.as_default():
+                for k, l in losses_val.items():
+                    tf.summary.scalar(k, l, i_epoch)
 
         print("", flush=True)
         print("Train losses:", losses_train)
