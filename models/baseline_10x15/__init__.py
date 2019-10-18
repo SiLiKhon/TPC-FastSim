@@ -59,7 +59,7 @@ gen_opt = tf.optimizers.RMSprop()
 
 def make_fake(size):
     return generator(
-        np.random.normal(size=(size, LATENT_DIM)).astype('float32')
+        tf.random.normal(shape=(size, LATENT_DIM), dtype='float32')
     )
 
 def disc_loss(d_real, d_fake):
