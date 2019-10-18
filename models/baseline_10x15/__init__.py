@@ -1,6 +1,4 @@
 import tensorflow as tf
-import numpy as np
-
 LATENT_DIM = 32
 activation = tf.keras.activations.elu
 dropout_rate = 0.2
