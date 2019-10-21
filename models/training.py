@@ -2,10 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import trange
 
-def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size, train_writer=None, val_writer=None):
-
-    losses_history = {}
-
+def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size, train_writer=None, val_writer=None, callbacks=[]):
     for i_epoch in range(num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
 
@@ -20,6 +17,8 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
         losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
+        for f in callbacks:
+            f(i_epoch)
         
         if train_writer is not None:
             with train_writer.as_default():
@@ -34,11 +33,3 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
         print("", flush=True)
         print("Train losses:", losses_train)
         print("Val losses:", losses_val)
-
-        for key in losses_train:
-            key_train = 'train_{}'.format(key)
-            key_val   = 'val_{}'  .format(key)
-            losses_history.setdefault(key_train, []).append(losses_train[key])
-            losses_history.setdefault(key_val  , []).append(losses_val  [key])
-    
-    return losses_history
