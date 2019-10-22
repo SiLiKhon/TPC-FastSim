@@ -3,3 +3,7 @@
 notebooks/saved_models/
 logs/
 saved_models/
+.jupyter/
+.local/
+.cache/
+.keras/
