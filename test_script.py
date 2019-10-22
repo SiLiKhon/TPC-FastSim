@@ -24,7 +24,7 @@ X_train, X_test = train_test_split(data_scaled, test_size=0.25, random_state=42)
 writer_train = tf.summary.create_file_writer('logs/baseline_10x15/train')
 writer_val   = tf.summary.create_file_writer('logs/baseline_10x15/validation')
 
-unscale = lambda x: 10**x - 1    
+unscale = lambda x: 10**x - 1
 
 def write_hist_summary(step):
     if step % 50 == 0:

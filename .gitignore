@@ -7,3 +7,4 @@ saved_models/
 .local/
 .cache/
 .keras/
+.ipython/
