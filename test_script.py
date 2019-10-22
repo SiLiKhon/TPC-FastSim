@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 os.environ['CUDA_DEVICE_ORDER']='PCI_BUS_ID'
 os.environ['CUDA_VISIBLE_DEVICES']='1'
@@ -43,9 +44,23 @@ def write_hist_summary(step):
             for k, img in images30.items():
                 tf.summary.image("{} (amp > 30)".format(k), img, step)
             tf.summary.image("log10(amplitude + 1)", img_amplitude, step)
-    
+
+model_path = Path("saved_models/baseline_10x15/")
+model_path.mkdir(parents=True)
+
+def save_model(step):
+    if step % 50 == 0:
+        baseline_10x15.generator    .save(str(model_path.joinpath("generator_{:05d}.h5"    .format(step))))
+        baseline_10x15.discriminator.save(str(model_path.joinpath("discriminator_{:05d}.h5".format(step))))
+
+def schedule_lr(step):
+    baseline_10x15.disc_opt.lr.assign(baseline_10x15.disc_opt.lr * 0.998)
+    baseline_10x15.gen_opt .lr.assign(baseline_10x15.gen_opt .lr * 0.998)
+    with writer_val.as_default():
+        tf.summary.scalar("discriminator learning rate", baseline_10x15.disc_opt.lr, step)
+        tf.summary.scalar("generator learning rate"    , baseline_10x15.gen_opt .lr, step)
 
 
-training.train(X_train, X_test, baseline_10x15.training_step, baseline_10x15.calculate_losses, 1000, 32,
+training.train(X_train, X_test, baseline_10x15.training_step, baseline_10x15.calculate_losses, 10000, 32,
                train_writer=writer_train, val_writer=writer_val,
-               callbacks=[write_hist_summary])
+               callbacks=[write_hist_summary, save_model, schedule_lr])

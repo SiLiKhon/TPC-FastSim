@@ -2,3 +2,4 @@
 *.ipynb_checkpoints
 notebooks/saved_models/
 logs/
+saved_models/
