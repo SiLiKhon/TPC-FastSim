@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 _THIS_PATH = Path(os.path.realpath(__file__)).parent
-_VERSION = 'data_v0'
+_VERSION = 'data_v1'
 
 def raw_to_csv(fname_in=None, fname_out=None):
     if fname_in is None:
