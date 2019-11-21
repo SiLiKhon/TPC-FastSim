@@ -1,9 +1,9 @@
 import tensorflow as tf
 LATENT_DIM = 32
-activation = tf.keras.activations.elu
+activation = tf.keras.activations.relu
 dropout_rate = 0.2
 
-NUM_DISC_UPDATES = 2
+NUM_DISC_UPDATES = 3
 GP_LAMBDA = 10.
 
 generator = tf.keras.Sequential([
@@ -51,13 +51,13 @@ discriminator = tf.keras.Sequential([
     tf.keras.layers.Dense(units=128, activation=activation),
     tf.keras.layers.Dropout(dropout_rate),
 
-    tf.keras.layers.Dense(units=1, activation=activation),
+    tf.keras.layers.Dense(units=1, activation=None),
 ], name='discriminator')
 
 
 
-disc_opt = tf.optimizers.RMSprop()
-gen_opt = tf.optimizers.RMSprop()
+disc_opt = tf.optimizers.RMSprop(0.0005)
+gen_opt  = tf.optimizers.RMSprop(0.0005)
 
 def make_fake(size):
     return generator(
