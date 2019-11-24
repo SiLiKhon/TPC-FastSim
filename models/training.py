@@ -38,3 +38,14 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
         print("", flush=True)
         print("Train losses:", losses_train)
         print("Val losses:", losses_val)
+
+
+def average(models):
+    parameters = [model.trainable_variables for model in models]
+    assert len(np.unique([len(par) for par in parameters])) == 1
+
+    result = tf.keras.models.clone_model(models[0])
+    for params in zip(result.trainable_variables, *parameters):
+        params[0].assign(tf.reduce_mean(params[1:], axis=0))
+
+    return result
