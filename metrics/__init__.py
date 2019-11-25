@@ -40,6 +40,27 @@ _METRIC_NAMES = ['Mean0', 'Mean1', 'Sigma0^2', 'Sigma1^2', 'Cov01', 'Sum']
 
 get_val_metric = np.vectorize(_get_val_metric_single, signature='(m,n)->(k)')
 
+def get_val_metric_v(imgs):
+    """Returns a vector of gaussian fit results to the image.
+    The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
+    """
+    assert imgs.ndim == 3
+    assert (imgs >= 0).all()
+    assert (imgs > 0).any(axis=(1, 2)).all()
+    imgs_n = imgs / imgs.sum(axis=(1, 2), keepdims=True)
+    mu = np.fromfunction(
+        lambda i, j: (imgs_n[:,np.newaxis,...] * np.stack([i, j])[np.newaxis,...]).sum(axis=(2, 3)),
+        shape=imgs.shape[1:]
+    )
+
+    cov = np.fromfunction(
+        lambda i, j: (
+            (imgs_n[:,np.newaxis,...] * np.stack([i * i, j * j, i * j])[np.newaxis,...]).sum(axis=(2, 3))
+        ) - np.stack([mu[:,0]**2, mu[:,1]**2, mu[:,0] * mu[:,1]]).T,
+        shape=imgs.shape[1:]
+    )
+
+    return np.concatenate([mu, cov, imgs.sum(axis=(1, 2))[:,np.newaxis]], axis=1)
 
 
 def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy=False):
@@ -66,8 +87,8 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
 def make_metric_plots(images_real, images_gen):
     plots = {}
     try:
-        metric_real = get_val_metric(images_real)
-        metric_gen  = get_val_metric(images_gen )
+        metric_real = get_val_metric_v(images_real)
+        metric_gen  = get_val_metric_v(images_gen )
     
         plots.update({name : make_histograms(real, gen, name)
                       for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T)})
