@@ -7,6 +7,25 @@ import pandas as pd
 _THIS_PATH = Path(os.path.realpath(__file__)).parent
 _VERSION = 'data_v1'
 
+class Reader:
+    def __init__(self, variables, types):
+        assert len(variables) == len(types)
+        self.vars = variables
+        self.types = types
+        self.data = []
+
+    def read_line(self, line, index):
+        stems = line.split()
+        assert (len(stems) // len(self.vars)) * len(self.vars) == len(stems), [line, self.vars]
+
+        for i_group in range(0, len(stems), len(self.vars)):
+            self.data.append((index,) + tuple(_T(stems[i_group + i_var]) for i_var, _T in enumerate(self.types)))
+
+    def build(self):
+        return pd.DataFrame(self.data, columns=['evtId'] + self.vars).set_index('evtId')
+
+
+
 def raw_to_csv(fname_in=None, fname_out=None):
     if fname_in is None:
         fname_in = str(_THIS_PATH.joinpath(_VERSION, 'raw', 'digits.dat'))
@@ -19,19 +38,33 @@ def raw_to_csv(fname_in=None, fname_out=None):
     with open(fname_in, 'r') as f:
         lines = f.readlines()
 
-    entries = []
+    reader_main = Reader(
+        variables = ['ipad', 'itime', 'amp'],
+        types    = [int   , int    , float]
+    )
 
-    for evt_id, line in enumerate(lines):
-        stems = line.split()
-        assert (len(stems) // 3) * 3 == len(stems)
+    data_sources = [lines]
+    readers = [reader_main]
 
-        for j in range(0, len(stems), 3):
-            #                       ## ipad        ## itime           ## amplitude
-            entries.append((evt_id, int(stems[j]), int(stems[j + 1]), float(stems[j + 2])))
-    
-    data = pd.DataFrame(entries, columns=['evtId', 'ipad', 'itime', 'amp'])
-    
-    data.to_csv(fname_out, index=False)
+    if 'params:' in lines[0]:
+        assert len(lines) % 2 == 0
+
+        reader_angles = Reader(
+            variables = ["crossing_angle", "dip_angle"],
+            types    = [float           , float      ]
+        )
+        lines, lines_angles = lines[1::2], lines[::2]
+        lines_angles = [' '.join(l.split()[1:]) for l in lines_angles]
+
+        data_sources = [lines, lines_angles]
+        readers = [reader_main, reader_angles]
+
+    for evt_id, lines_tuple in enumerate(zip(*data_sources)):
+        for r, l in zip(readers, lines_tuple):
+            r.read_line(l, evt_id)
+            
+    result = pd.concat([r.build() for r in readers], axis=1).reset_index()
+    result.to_csv(fname_out, index=False)
 
 def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     if filename is None:
