@@ -87,4 +87,8 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
         return result
 
     data = np.stack(g.apply(convert_event).values)
+
+    if 'crossing_angle' in df.columns:
+        return data, g.mean()[['crossing_angle', 'dip_angle']].values
+
     return data
