@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import trange
 
+
 def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size, train_writer=None, val_writer=None, callbacks=[]):
     for i_epoch in range(num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
