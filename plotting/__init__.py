@@ -9,6 +9,7 @@ def _bootstrap_error(data, function, num_bs=100):
     bs_data = np.random.choice(data, size=(num_bs, len(data)), replace=True)
     return np.array([function(bs_sample) for bs_sample in bs_data]).std()
 
+
 def _get_stats(arr):
     class Obj:
         pass
@@ -21,6 +22,7 @@ def _get_stats(arr):
     result.width_err = _bootstrap_error(arr, np.std)
     
     return result
+
 
 def compare_two_dists(d_real, d_gen, label, tag=None, nbins=100):
     ax = plt.gca()
@@ -39,7 +41,7 @@ def compare_two_dists(d_real, d_gen, label, tag=None, nbins=100):
         leg_entry = 'gen'
     
     plt.hist(d_real, bins=bins, density=True, label='real')
-    plt.hist(d_gen , bins=bins, density=True, label=leg_entry, histtype='step', linewidth=2.)
+    plt.hist(d_gen, bins=bins, density=True, label=leg_entry, histtype='step', linewidth=2.)
     
     string = '\n'.join([
         f"real: mean = {stats_real.mean :.4f} +/- {stats_real.mean_err :.4f}",
