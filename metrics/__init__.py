@@ -6,6 +6,7 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import PIL
 
+
 def _gaussian_fit(img):
     assert img.ndim == 2
     assert (img >= 0).all()
@@ -24,6 +25,7 @@ def _gaussian_fit(img):
     ).reshape(2, 2)
     return mu, cov
 
+
 def _get_val_metric_single(img):
     """Returns a vector of gaussian fit results to the image.
     The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
@@ -36,9 +38,12 @@ def _get_val_metric_single(img):
 
     return np.array((*mu, *cov.diagonal(), cov[0, 1], img.sum()))
 
+
 _METRIC_NAMES = ['Mean0', 'Mean1', 'Sigma0^2', 'Sigma1^2', 'Cov01', 'Sum']
 
+
 get_val_metric = np.vectorize(_get_val_metric_single, signature='(m,n)->(k)')
+
 
 def get_val_metric_v(imgs):
     """Returns a vector of gaussian fit results to the image.
@@ -84,6 +89,7 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     img = PIL.Image.open(buf)
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
 
+
 def make_metric_plots(images_real, images_gen):
     plots = {}
     try:
@@ -96,5 +102,3 @@ def make_metric_plots(images_real, images_gen):
         pass
 
     return plots
-    
-    

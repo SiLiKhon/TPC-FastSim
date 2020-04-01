@@ -2,11 +2,13 @@ import tensorflow as tf
 import numpy as np
 from tqdm import trange
 
-def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size, train_writer=None, val_writer=None, callbacks=[]):
+
+def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size,
+          train_writer=None, val_writer=None, callbacks=[]):
     for i_epoch in range(num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
 
-        tf.keras.backend.set_learning_phase(1) # training
+        tf.keras.backend.set_learning_phase(1)  # training
         
         shuffle_ids = np.random.permutation(len(data_train))
         losses_train = {}
@@ -19,7 +21,7 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
         
-        tf.keras.backend.set_learning_phase(0) # testing
+        tf.keras.backend.set_learning_phase(0)  # testing
         
         losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
         for f in callbacks:
