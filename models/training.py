@@ -4,7 +4,11 @@ from tqdm import trange
 
 
 def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size,
-          train_writer=None, val_writer=None, callbacks=[]):
+          train_writer=None, val_writer=None, callbacks=[], features_train=None, features_val=None):
+    if not ((features_train is None) or (features_val is None)):
+        assert features_train is not None
+        assert features_val is not None
+
     for i_epoch in range(num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
 
@@ -15,15 +19,23 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
 
         for i_sample in trange(0, len(data_train), batch_size):
             batch = data_train[shuffle_ids][i_sample:i_sample + batch_size]
+            if features_train is not None:
+                feature_batch = features_train[shuffle_ids][i_sample:i_sample + batch_size]
 
-            losses_train_batch = train_step_fn(batch)
+            if features_train is None:
+                losses_train_batch = train_step_fn(batch)
+            else:
+                losses_train_batch = train_step_fn(feature_batch, batch)
             for k, l in losses_train_batch.items():
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
         
         tf.keras.backend.set_learning_phase(0)  # testing
         
-        losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
+        if features_train is None:
+            losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
+        else:
+            losses_val = {k : l.numpy() for k, l in loss_eval_fn(features_val, data_val).items()}
         for f in callbacks:
             f(i_epoch)
         

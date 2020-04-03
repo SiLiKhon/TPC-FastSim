@@ -74,8 +74,15 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
 
     sel = lambda df, col, limits: (df[col] >= limits[0]) & (df[col] < limits[1])
 
-    g = df[sel(df, 'itime', time_range) & 
-           sel(df, 'ipad' , pad_range )].groupby('evtId')
+    selection = (
+        sel(df, 'itime', time_range) &
+        sel(df, 'ipad' , pad_range )
+    )
+
+    if not selection.all():
+        print(f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data!")
+
+    g = df[selection].groupby('evtId')
 
     def convert_event(event):
         result = np.zeros(dtype=float, shape=(pad_range [1] - pad_range [0],
@@ -89,6 +96,7 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     data = np.stack(g.apply(convert_event).values)
 
     if 'crossing_angle' in df.columns:
-        return data, g.mean()[['crossing_angle', 'dip_angle']].values
+        assert (g[['crossing_angle', 'dip_angle']].std() == 0).all().all()
+        return data, g[['crossing_angle', 'dip_angle']].mean().values
 
     return data

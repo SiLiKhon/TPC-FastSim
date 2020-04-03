@@ -90,7 +90,7 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
 
 
-def make_metric_plots(images_real, images_gen):
+def make_metric_plots(images_real, images_gen, features=None):
     plots = {}
     try:
         metric_real = get_val_metric_v(images_real)
@@ -98,7 +98,60 @@ def make_metric_plots(images_real, images_gen):
     
         plots.update({name : make_histograms(real, gen, name)
                       for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T)})
-    except AssertionError:
-        pass
+
+        if features is not None:
+            for feature_name, feature in features.items():
+                for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
+                    name = f'{metric_name} vs {feature_name}'
+                    plots[name] = make_trend(feature, real, gen, name)
+
+    except AssertionError as e:
+        print(f"WARNING! Assertion error ({e})")
 
     return plots
+
+def plot_trend(x, y, bins=100, window_size=20, **kwargs):
+    assert x.ndim == 1
+    assert y.ndim == 1
+    if isinstance(bins, int):
+        bins = np.linspace(np.min(x), np.max(x), bins + 1)
+    sel = (x >= bins[0])
+    x, y = x[sel], y[sel]
+    cats = (x[:,np.newaxis] < bins[np.newaxis,1:]).argmax(axis=1)
+    
+    def stats(arr):
+        return arr.mean(), arr.std()
+    
+    mean, std, bin_centers = np.array([
+        stats(
+            y[(cats >= left) & (cats < right)]
+        ) + ((bins[left] + bins[right]) / 2,) for left, right in zip(
+            range(len(bins) - window_size),
+            range(window_size, len(bins))
+        )
+    ]).T
+    
+    plt.plot(bin_centers, mean, lw=2, **kwargs)
+    kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
+    plt.plot(bin_centers, mean + std, '--', lw=1, **kwargs)
+    plt.plot(bin_centers, mean - std, '--', lw=1, **kwargs)
+
+def make_trend(feature, real, gen, name, figsize=(8, 8)):
+    feature = feature.squeeze()
+    real = real.squeeze()
+    gen = gen.squeeze()
+
+    fig = plt.figure(figsize=figsize)
+    plot_trend(feature, real, label='real', color='blue')
+    plot_trend(feature, gen, label='generated', color='red')
+    plt.legend()
+    plt.title(name)
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+    
+    img = PIL.Image.open(buf)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+
