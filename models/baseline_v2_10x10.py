@@ -80,11 +80,12 @@ def gen_loss(d_real, d_fake):
 class BaselineModel10x10:
     def __init__(self, activation=tf.keras.activations.relu, kernel_init='glorot_uniform',
                  dropout_rate=0.2, lr=1e-4, latent_dim=32, gp_lambda=10., num_disc_updates=3,
-                 num_features=1):
+                 num_features=1, gpdata_lambda=0.):
         self.disc_opt = tf.keras.optimizers.RMSprop(lr)
         self.gen_opt = tf.keras.optimizers.RMSprop(lr)
         self.latent_dim = latent_dim
         self.gp_lambda = gp_lambda
+        self.gpdata_lambda = gpdata_lambda
         self.num_disc_updates = num_disc_updates
         self.num_features = num_features
 
@@ -113,18 +114,36 @@ class BaselineModel10x10:
         grads = tf.reshape(t.gradient(d_int, interpolates), [len(real), -1])
         return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0)**2)
 
+    def gradient_penalty_on_data(self, features, real):
+        with tf.GradientTape() as t:
+            t.watch(real)
+            d_real = self.discriminator([features, real])
+        grads = tf.reshape(t.gradient(d_real, real), [len(real), -1])
+        return tf.reduce_mean(tf.reduce_sum(grads**2, axis=-1))
+
     @tf.function
     def calculate_losses(self, feature_batch, target_batch):
         fake = self.make_fake(feature_batch)
         d_real = self.discriminator([feature_batch, target_batch])
         d_fake = self.discriminator([feature_batch, fake])
 
-        d_loss = (
-            disc_loss(d_real, d_fake) + 
-            self.gradient_penalty(
-                feature_batch, target_batch, fake
-            ) * self.gp_lambda
-        )
+        d_loss = disc_loss(d_real, d_fake)
+
+        if self.gp_lambda > 0:
+            d_loss = (
+                d_loss +
+                self.gradient_penalty(
+                    feature_batch, target_batch, fake
+                ) * self.gp_lambda
+            )
+        if self.gpdata_lambda > 0:
+            d_loss = (
+                d_loss +
+                self.gradient_penalty_on_data(
+                    feature_batch, target_batch
+                ) * self.gpdata_lambda
+            )
+
         g_loss = gen_loss(d_real, d_fake)
         return {'disc_loss': d_loss, 'gen_loss': g_loss}
 

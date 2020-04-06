@@ -1,4 +1,4 @@
-import os
+import os, sys
 from pathlib import Path
 import argparse
 import numpy as np
@@ -12,7 +12,7 @@ from metrics import make_metric_plots, make_histograms
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
     parser.add_argument('--checkpoint_name', type=str, required=True)
     parser.add_argument('--batch_size', type=int, default=32, required=False)
     parser.add_argument('--lr', type=float, default=1e-4, required=False)
@@ -23,8 +23,19 @@ def main():
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
     parser.add_argument('--gpu_num', type=str, default='0', required=False)
     parser.add_argument('--kernel_init', type=str, default='glorot_uniform', required=False)
+    parser.add_argument('--gp_lambda', type=float, default=10., required=False)
+    parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
+
 
     args = parser.parse_args()
+
+    print("")
+    print("----" * 10)
+    print("Arguments:")
+    for k, v in vars(args).items():
+        print(f"    {k} : {v}")
+    print("----" * 10)
+    print("")
 
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     if args.gpu_num is not None:
@@ -39,8 +50,20 @@ def main():
     model_path = Path('saved_models') / args.checkpoint_name
     assert not model_path.exists(), "Model directory already exists"
     model_path.mkdir(parents=True)
+
+    with open(model_path / 'arguments.txt', 'w') as f:
+        raw_args = [a for a in sys.argv[1:] if a[0] != '@']
+        fnames = [a[1:] for a in sys.argv[1:] if a[0] == '@']
+
+        f.write('\n'.join(raw_args))
+        for fname in fnames:
+            with open(fname, 'r') as f_in:
+                if len(raw_args) > 0: f.write('\n')
+                f.write(f_in.read())
+
     model = BaselineModel10x10(kernel_init=args.kernel_init, lr=args.lr,
-                               num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim)
+                               num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim,
+                               gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda)
 
     def save_model(step):
         if step % args.save_every == 0:
