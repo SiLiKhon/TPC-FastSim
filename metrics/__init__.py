@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import PIL
 
 
+from plotting import _bootstrap_error
+
+
 def _gaussian_fit(img):
     assert img.ndim == 2, '_gaussian_fit: Wrong image dimentions'
     assert (img >= 0).all(), '_gaussian_fit: negative image content'
@@ -113,6 +116,10 @@ def make_metric_plots(images_real, images_gen, features=None):
 def plot_trend(x, y, bins=100, window_size=20, **kwargs):
     assert x.ndim == 1, 'plot_trend: wrong x dim'
     assert y.ndim == 1, 'plot_trend: wrong y dim'
+
+    if 'alpha' not in kwargs:
+        kwargs['alpha'] = 0.7
+
     if isinstance(bins, int):
         bins = np.linspace(np.min(x), np.max(x), bins + 1)
     sel = (x >= bins[0])
@@ -120,9 +127,14 @@ def plot_trend(x, y, bins=100, window_size=20, **kwargs):
     cats = (x[:,np.newaxis] < bins[np.newaxis,1:]).argmax(axis=1)
     
     def stats(arr):
-        return arr.mean(), arr.std()
+        return (
+            arr.mean(),
+            arr.std() / (len(arr) - 1)**0.5,
+            arr.std(),
+            _bootstrap_error(arr, np.std)
+        )
     
-    mean, std, bin_centers = np.array([
+    mean, mean_err, std, std_err, bin_centers = np.array([
         stats(
             y[(cats >= left) & (cats < right)]
         ) + ((bins[left] + bins[right]) / 2,) for left, right in zip(
@@ -130,11 +142,15 @@ def plot_trend(x, y, bins=100, window_size=20, **kwargs):
             range(window_size, len(bins))
         )
     ]).T
-    
-    plt.plot(bin_centers, mean, lw=2, **kwargs)
+    mean_p_std_err = (mean_err**2 + std_err**2)**0.5
+    plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
+    kwargs['alpha'] *= 0.5
     kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
-    plt.plot(bin_centers, mean + std, '--', lw=1, **kwargs)
-    plt.plot(bin_centers, mean - std, '--', lw=1, **kwargs)
+    plt.fill_between(bin_centers, mean - std - mean_p_std_err, mean - std + mean_p_std_err, **kwargs)
+    plt.fill_between(bin_centers, mean + std - mean_p_std_err, mean + std + mean_p_std_err, **kwargs)
+    kwargs['alpha'] *= 0.25
+    plt.fill_between(bin_centers, mean - std + mean_p_std_err, mean + std - mean_p_std_err, **kwargs)
+
 
 def make_trend(feature, real, gen, name, figsize=(8, 8)):
     feature = feature.squeeze()

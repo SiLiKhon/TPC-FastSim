@@ -1,7 +1,7 @@
 docker run -it \
   -u $(id -u):$(id -g) \
   --env HOME=`pwd` \
-  -p 127.0.0.1:6006:6006/tcp \
+  -p 127.0.0.1:6126:6006/tcp \
   --runtime nvidia \
   -v `pwd`:`pwd` \
   silikhon/tensorflow2:v1 \
