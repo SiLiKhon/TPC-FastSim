@@ -6,8 +6,8 @@ from tqdm import trange
 def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size,
           train_writer=None, val_writer=None, callbacks=[], features_train=None, features_val=None):
     if not ((features_train is None) or (features_val is None)):
-        assert features_train is not None
-        assert features_val is not None
+        assert features_train is not None, 'train: features should be provided for both train and val'
+        assert features_val is not None, 'train: features should be provided for both train and val'
 
     for i_epoch in range(num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
@@ -56,7 +56,7 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
 
 def average(models):
     parameters = [model.trainable_variables for model in models]
-    assert len(np.unique([len(par) for par in parameters])) == 1
+    assert len(np.unique([len(par) for par in parameters])) == 1, 'average: different models provided'
 
     result = tf.keras.models.clone_model(models[0])
     for params in zip(result.trainable_variables, *parameters):

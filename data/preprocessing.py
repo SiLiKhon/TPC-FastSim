@@ -9,7 +9,7 @@ _VERSION = 'data_v1'
 
 class Reader:
     def __init__(self, variables, types):
-        assert len(variables) == len(types)
+        assert len(variables) == len(types), 'Reader.__init__: variables and types have different length'
         self.vars = variables
         self.types = types
         self.data = []
@@ -40,18 +40,18 @@ def raw_to_csv(fname_in=None, fname_out=None):
 
     reader_main = Reader(
         variables = ['ipad', 'itime', 'amp'],
-        types    = [int   , int    , float]
+        types     = [int   , int    , float]
     )
 
     data_sources = [lines]
     readers = [reader_main]
 
     if 'params:' in lines[0]:
-        assert len(lines) % 2 == 0
+        assert len(lines) % 2 == 0, 'raw_to_csv: Odd number of lines when expected even'
 
         reader_angles = Reader(
             variables = ["crossing_angle", "dip_angle"],
-            types    = [float           , float      ]
+            types     = [float           , float      ]
         )
         lines, lines_angles = lines[1::2], lines[::2]
         lines_angles = [' '.join(l.split()[1:]) for l in lines_angles]
@@ -96,7 +96,7 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     data = np.stack(g.apply(convert_event).values)
 
     if 'crossing_angle' in df.columns:
-        assert (g[['crossing_angle', 'dip_angle']].std() == 0).all().all()
+        assert (g[['crossing_angle', 'dip_angle']].std() == 0).all().all(), 'Varying features within same events...'
         return data, g[['crossing_angle', 'dip_angle']].mean().values
 
     return data

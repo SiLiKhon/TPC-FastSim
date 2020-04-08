@@ -5,7 +5,7 @@ from matplotlib import rcParams
 
 
 def _bootstrap_error(data, function, num_bs=100):
-    assert data.ndim == 1
+    assert data.ndim == 1, '_bootstrap_error: wrong data dimention'
     bs_data = np.random.choice(data, size=(num_bs, len(data)), replace=True)
     return np.array([function(bs_sample) for bs_sample in bs_data]).std()
 

@@ -8,9 +8,9 @@ import PIL
 
 
 def _gaussian_fit(img):
-    assert img.ndim == 2
-    assert (img >= 0).all()
-    assert (img > 0).any()
+    assert img.ndim == 2, '_gaussian_fit: Wrong image dimentions'
+    assert (img >= 0).all(), '_gaussian_fit: negative image content'
+    assert (img > 0).any(), '_gaussian_fit: blank image'
     img_n = img / img.sum()
 
     mu = np.fromfunction(
@@ -30,7 +30,7 @@ def _get_val_metric_single(img):
     """Returns a vector of gaussian fit results to the image.
     The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
     """
-    assert img.ndim == 2
+    assert img.ndim == 2, '_get_val_metric_single: Wrong image dimentions'
 
     img = np.where(img < 0, 0, img)
 
@@ -49,9 +49,9 @@ def get_val_metric_v(imgs):
     """Returns a vector of gaussian fit results to the image.
     The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
     """
-    assert imgs.ndim == 3
-    assert (imgs >= 0).all()
-    assert (imgs > 0).any(axis=(1, 2)).all()
+    assert imgs.ndim == 3, 'get_val_metric_v: Wrong images dimentions'
+    assert (imgs >= 0).all(), 'get_val_metric_v: Negative image content'
+    assert (imgs > 0).any(axis=(1, 2)).all(), 'get_val_metric_v: some images are empty'
     imgs_n = imgs / imgs.sum(axis=(1, 2), keepdims=True)
     mu = np.fromfunction(
         lambda i, j: (imgs_n[:,np.newaxis,...] * np.stack([i, j])[np.newaxis,...]).sum(axis=(2, 3)),
@@ -111,8 +111,8 @@ def make_metric_plots(images_real, images_gen, features=None):
     return plots
 
 def plot_trend(x, y, bins=100, window_size=20, **kwargs):
-    assert x.ndim == 1
-    assert y.ndim == 1
+    assert x.ndim == 1, 'plot_trend: wrong x dim'
+    assert y.ndim == 1, 'plot_trend: wrong y dim'
     if isinstance(bins, int):
         bins = np.linspace(np.min(x), np.max(x), bins + 1)
     sel = (x >= bins[0])
