@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--kernel_init', type=str, default='glorot_uniform', required=False)
     parser.add_argument('--gp_lambda', type=float, default=10., required=False)
     parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
+    parser.add_argument('--angles_to_radians', action='store_true')
 
 
     args = parser.parse_args()
@@ -75,6 +76,8 @@ def main():
     data, features = preprocessing.read_csv_2d(pad_range=(39, 49), time_range=(266, 276))
     assert np.isclose(features[:,1].std(), 0), features[:,1].std()
     features = features[:,:1].astype('float32')
+    if args.angles_to_radians:
+        features *= np.pi / 180
 
     data_scaled = np.log10(1 + data).astype('float32')
     Y_train, Y_test, X_train, X_test = train_test_split(data_scaled, features, test_size=0.25, random_state=42)
