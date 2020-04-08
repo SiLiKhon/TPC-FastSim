@@ -26,6 +26,7 @@ def main():
     parser.add_argument('--gp_lambda', type=float, default=10., required=False)
     parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
     parser.add_argument('--angles_to_radians', action='store_true')
+    parser.add_argument('--num_additional_disc_layers', type=int, default=0, required=False)
 
 
     args = parser.parse_args()
@@ -64,7 +65,8 @@ def main():
 
     model = BaselineModel10x10(kernel_init=args.kernel_init, lr=args.lr,
                                num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim,
-                               gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda)
+                               gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda,
+                               num_additional_layers=args.num_additional_disc_layers)
 
     def save_model(step):
         if step % args.save_every == 0:

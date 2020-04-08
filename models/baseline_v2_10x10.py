@@ -23,7 +23,7 @@ def get_generator(activation, kernel_init, num_features, latent_dim):
     return generator
 
 
-def get_discriminator(activation, kernel_init, dropout_rate, num_features):
+def get_discriminator(activation, kernel_init, dropout_rate, num_features, num_additional_layers):
     discriminator_tail = tf.keras.Sequential([
         tf.keras.layers.Reshape((10, 10, 1), input_shape=(10, 10)),
 
@@ -50,12 +50,20 @@ def get_discriminator(activation, kernel_init, dropout_rate, num_features):
     features_input = tf.keras.Input(shape=(num_features,))
     head_input = tf.keras.layers.Concatenate()([features_input, discriminator_tail.output])
 
-    discriminator_head = tf.keras.Sequential([
+    head_layers = [
         tf.keras.layers.Dense(units=128, activation=activation, input_shape=(num_features + 64,)),
         tf.keras.layers.Dropout(dropout_rate),
+    ]
+    for _ in range(num_additional_layers):
+        head_layers += [
+            tf.keras.layers.Dense(units=128, activation=activation),
+            tf.keras.layers.Dropout(dropout_rate),
+        ]
 
-        tf.keras.layers.Dense(units=1, activation=None),
-    ], name='discriminator_head')
+    discriminator_head = tf.keras.Sequential(
+        head_layers + [tf.keras.layers.Dense(units=1, activation=None)],
+        name='discriminator_head'
+    )
 
     inputs = [features_input, discriminator_tail.input]
     outputs = discriminator_head(head_input)
@@ -80,7 +88,7 @@ def gen_loss(d_real, d_fake):
 class BaselineModel10x10:
     def __init__(self, activation=tf.keras.activations.relu, kernel_init='glorot_uniform',
                  dropout_rate=0.2, lr=1e-4, latent_dim=32, gp_lambda=10., num_disc_updates=3,
-                 num_features=1, gpdata_lambda=0.):
+                 num_features=1, gpdata_lambda=0., num_additional_layers=0):
         self.disc_opt = tf.keras.optimizers.RMSprop(lr)
         self.gen_opt = tf.keras.optimizers.RMSprop(lr)
         self.latent_dim = latent_dim
@@ -93,7 +101,8 @@ class BaselineModel10x10:
             activation=activation, kernel_init=kernel_init, latent_dim=latent_dim, num_features=num_features
         )
         self.discriminator = get_discriminator(
-            activation=activation, kernel_init=kernel_init, dropout_rate=dropout_rate, num_features=num_features
+            activation=activation, kernel_init=kernel_init, dropout_rate=dropout_rate, num_features=num_features,
+            num_additional_layers=num_additional_layers
         )
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)
