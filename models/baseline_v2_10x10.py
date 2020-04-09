@@ -23,10 +23,23 @@ def get_generator(activation, kernel_init, num_features, latent_dim):
     return generator
 
 
-def get_discriminator(activation, kernel_init, dropout_rate, num_features, num_additional_layers, cramer=False):
-    discriminator_tail = tf.keras.Sequential([
-        tf.keras.layers.Reshape((10, 10, 1), input_shape=(10, 10)),
+def get_discriminator(activation, kernel_init, dropout_rate, num_features, num_additional_layers, cramer=False,
+                      features_to_tail=False):
+    input_img = tf.keras.Input(shape=(10, 10))
+    features_input = tf.keras.Input(shape=(num_features,))
 
+    img = tf.reshape(input_img, (-1, 10, 10, 1))
+    if features_to_tail:
+        features_tiled = tf.tile(
+            tf.reshape(features_input, (-1, 1, 1, num_features)),
+            (1, 10, 10, 1)
+        )
+        img = tf.concat(
+            [img, features_tiled],
+            axis=-1
+        )
+
+    discriminator_tail = tf.keras.Sequential([
         tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
         tf.keras.layers.Dropout(dropout_rate),
         tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='valid', activation=activation, kernel_initializer=kernel_init),  # 8x8
@@ -47,8 +60,7 @@ def get_discriminator(activation, kernel_init, dropout_rate, num_features, num_a
         tf.keras.layers.Reshape((64,))
     ], name='discriminator_tail')
 
-    features_input = tf.keras.Input(shape=(num_features,))
-    head_input = tf.keras.layers.Concatenate()([features_input, discriminator_tail.output])
+    head_input = tf.keras.layers.Concatenate()([features_input, discriminator_tail(img)])
 
     head_layers = [
         tf.keras.layers.Dense(units=128, activation=activation, input_shape=(num_features + 64,)),
@@ -66,7 +78,7 @@ def get_discriminator(activation, kernel_init, dropout_rate, num_features, num_a
         name='discriminator_head'
     )
 
-    inputs = [features_input, discriminator_tail.input]
+    inputs = [features_input, input_img]
     outputs = discriminator_head(head_input)
 
     discriminator = tf.keras.Model(
@@ -100,7 +112,8 @@ def gen_loss_cramer(d_real, d_fake, d_fake_2):
 class BaselineModel10x10:
     def __init__(self, activation=tf.keras.activations.relu, kernel_init='glorot_uniform',
                  dropout_rate=0.2, lr=1e-4, latent_dim=32, gp_lambda=10., num_disc_updates=3,
-                 num_features=1, gpdata_lambda=0., num_additional_layers=0, cramer=False):
+                 num_features=1, gpdata_lambda=0., num_additional_layers=0, cramer=False,
+                 features_to_tail=False):
         self.disc_opt = tf.keras.optimizers.RMSprop(lr)
         self.gen_opt = tf.keras.optimizers.RMSprop(lr)
         self.latent_dim = latent_dim
@@ -115,7 +128,7 @@ class BaselineModel10x10:
         )
         self.discriminator = get_discriminator(
             activation=activation, kernel_init=kernel_init, dropout_rate=dropout_rate, num_features=num_features,
-            num_additional_layers=num_additional_layers, cramer=cramer
+            num_additional_layers=num_additional_layers, cramer=cramer, features_to_tail=features_to_tail
         )
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)

@@ -28,6 +28,8 @@ def main():
     parser.add_argument('--angles_to_radians', action='store_true')
     parser.add_argument('--num_additional_disc_layers', type=int, default=0, required=False)
     parser.add_argument('--cramer_gan', action='store_true', default=False)
+    parser.add_argument('--features_to_tail', action='store_true', default=False)
+    parser.add_argument('--dropout_rate', type=float, default=0.2, required=False)
 
 
     args = parser.parse_args()
@@ -68,7 +70,8 @@ def main():
                                num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim,
                                gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda,
                                num_additional_layers=args.num_additional_disc_layers,
-                               cramer=args.cramer_gan)
+                               cramer=args.cramer_gan, features_to_tail=args.features_to_tail,
+                               dropout_rate=args.dropout_rate)
 
     def save_model(step):
         if step % args.save_every == 0:
