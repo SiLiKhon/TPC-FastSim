@@ -21,7 +21,7 @@ def main():
     parser.add_argument('--save_every', type=int, default=50, required=False)
     parser.add_argument('--num_epochs', type=int, default=10000, required=False)
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
-    parser.add_argument('--gpu_num', type=str, default='0', required=False)
+    parser.add_argument('--gpu_num', type=str, required=False)
     parser.add_argument('--kernel_init', type=str, default='glorot_uniform', required=False)
     parser.add_argument('--gp_lambda', type=float, default=10., required=False)
     parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
