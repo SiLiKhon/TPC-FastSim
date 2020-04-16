@@ -93,7 +93,7 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
 
 
-def make_metric_plots(images_real, images_gen, features=None):
+def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
     plots = {}
     try:
         metric_real = get_val_metric_v(images_real)
@@ -103,19 +103,29 @@ def make_metric_plots(images_real, images_gen, features=None):
                       for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T)})
 
         if features is not None:
+            if calc_chi2:
+                chi2 = 0
+
             for feature_name, feature in features.items():
                 for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
                     name = f'{metric_name} vs {feature_name}'
-                    plots[name] = make_trend(feature, real, gen, name)
+                    if calc_chi2 and (metric_name != "Sum"):
+                        plots[name], chi2_i = make_trend(feature, real, gen, name, calc_chi2=True)
+                        chi2 += chi2_i
+                    else:
+                        plots[name] = make_trend(feature, real, gen, name)
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
 
+    if calc_chi2:
+        return plots, chi2
+
     return plots
 
-def plot_trend(x, y, bins=100, window_size=20, **kwargs):
-    assert x.ndim == 1, 'plot_trend: wrong x dim'
-    assert y.ndim == 1, 'plot_trend: wrong y dim'
+def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
+    assert x.ndim == 1, 'calc_trend: wrong x dim'
+    assert y.ndim == 1, 'calc_trend: wrong y dim'
 
     if 'alpha' not in kwargs:
         kwargs['alpha'] = 0.7
@@ -142,24 +152,29 @@ def plot_trend(x, y, bins=100, window_size=20, **kwargs):
             range(window_size, len(bins))
         )
     ]).T
-    mean_p_std_err = (mean_err**2 + std_err**2)**0.5
-    plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
-    kwargs['alpha'] *= 0.5
-    kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
-    plt.fill_between(bin_centers, mean - std - mean_p_std_err, mean - std + mean_p_std_err, **kwargs)
-    plt.fill_between(bin_centers, mean + std - mean_p_std_err, mean + std + mean_p_std_err, **kwargs)
-    kwargs['alpha'] *= 0.25
-    plt.fill_between(bin_centers, mean - std + mean_p_std_err, mean + std - mean_p_std_err, **kwargs)
 
 
-def make_trend(feature, real, gen, name, figsize=(8, 8)):
+    if do_plot:
+        mean_p_std_err = (mean_err**2 + std_err**2)**0.5
+        plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
+        kwargs['alpha'] *= 0.5
+        kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
+        plt.fill_between(bin_centers, mean - std - mean_p_std_err, mean - std + mean_p_std_err, **kwargs)
+        plt.fill_between(bin_centers, mean + std - mean_p_std_err, mean + std + mean_p_std_err, **kwargs)
+        kwargs['alpha'] *= 0.25
+        plt.fill_between(bin_centers, mean - std + mean_p_std_err, mean + std - mean_p_std_err, **kwargs)
+
+    return (mean, std), (mean_err, std_err)
+
+
+def make_trend(feature, real, gen, name, calc_chi2=False, figsize=(8, 8)):
     feature = feature.squeeze()
     real = real.squeeze()
     gen = gen.squeeze()
 
     fig = plt.figure(figsize=figsize)
-    plot_trend(feature, real, label='real', color='blue')
-    plot_trend(feature, gen, label='generated', color='red')
+    calc_trend(feature, real, label='real', color='blue')
+    calc_trend(feature, gen, label='generated', color='red')
     plt.legend()
     plt.title(name)
 
@@ -169,5 +184,31 @@ def make_trend(feature, real, gen, name, figsize=(8, 8)):
     buf.seek(0)
     
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+    img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
 
+    if calc_chi2:
+        (
+            (real_mean, real_std),
+            (real_mean_err, real_std_err)
+        ) = calc_trend(feature, real, do_plot=False, bins=20, window_size=1)
+        (
+            (gen_mean, gen_std),
+            (gen_mean_err, gen_std_err)
+        ) = calc_trend(feature, gen, do_plot=False, bins=20, window_size=1)
+
+        gen_upper = gen_mean + gen_std
+        gen_lower = gen_mean - gen_std
+        gen_err2 = gen_mean_err**2 + gen_std_err**2
+
+        real_upper = real_mean + real_std
+        real_lower = real_mean - real_std
+        real_err2 = real_mean_err**2 + real_std_err**2
+
+        chi2 = (
+            ((gen_upper - real_upper)**2 / (gen_err2 + real_err2)).sum() +
+            ((gen_lower - real_lower)**2 / (gen_err2 + real_err2)).sum()
+        )
+
+        return img_data, chi2
+    
+    return img_data
