@@ -1,0 +1,9 @@
+--checkpoint_name
+baseline_v2_10x10
+--gpdata_lambda
+1.
+--gpu_num
+2
+--features_to_tail
+--dropout_rate
+0.02
