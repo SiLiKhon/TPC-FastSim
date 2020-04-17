@@ -184,7 +184,7 @@ def main():
 
         array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
 
-        images, images1, img_amplitude, gen_dataset = get_images(return_raw_data=True)
+        images, images1, img_amplitude, gen_dataset, chi2 = get_images(calc_chi2=True, return_raw_data=True)
         for k, img in images.items():
             array_to_img(img).save(str(prediction_path / f"{k}.png"))
         for k, img in images.items():
@@ -200,6 +200,8 @@ def main():
                             continue
                         f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
                 f.write('\n')
+        with open(str(prediction_path / 'stats'), 'w') as f:
+            f.write(f"{chi2:.2f}\n")
 
     else:
         train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
