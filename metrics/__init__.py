@@ -77,8 +77,8 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     bins = np.linspace(l, r, n_bins + 1)
     
     fig = plt.figure(figsize=figsize)
-    plt.hist(data_real, bins=bins, label='real')
-    plt.hist(data_gen , bins=bins, label='generated', alpha=0.7)
+    plt.hist(data_real, bins=bins, density=True, label='real')
+    plt.hist(data_gen , bins=bins, density=True, label='generated', alpha=0.7)
     if logy:
         plt.yscale('log')
     plt.legend()
@@ -106,14 +106,17 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
             if calc_chi2:
                 chi2 = 0
 
-            for feature_name, feature in features.items():
+            for feature_name, (feature_real, feature_gen) in features.items():
                 for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
                     name = f'{metric_name} vs {feature_name}'
                     if calc_chi2 and (metric_name != "Sum"):
-                        plots[name], chi2_i = make_trend(feature, real, gen, name, calc_chi2=True)
+                        plots[name], chi2_i = make_trend(feature_real, real,
+                                                         feature_gen, gen,
+                                                         name, calc_chi2=True)
                         chi2 += chi2_i
                     else:
-                        plots[name] = make_trend(feature, real, gen, name)
+                        plots[name] = make_trend(feature_real, real,
+                                                 feature_gen, gen, name)
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
@@ -167,14 +170,21 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     return (mean, std), (mean_err, std_err)
 
 
-def make_trend(feature, real, gen, name, calc_chi2=False, figsize=(8, 8)):
-    feature = feature.squeeze()
+def make_trend(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8)):
+    feature_real = feature_real.squeeze()
+    feature_gen = feature_gen.squeeze()
     real = real.squeeze()
     gen = gen.squeeze()
 
+    bins = np.linspace(
+        min(feature_real.min(), feature_gen.min()),
+        max(feature_real.max(), feature_gen.max()),
+        100
+    )
+
     fig = plt.figure(figsize=figsize)
-    calc_trend(feature, real, label='real', color='blue')
-    calc_trend(feature, gen, label='generated', color='red')
+    calc_trend(feature_real, real, bins=bins, label='real', color='blue')
+    calc_trend(feature_gen, gen, bins=bins, label='generated', color='red')
     plt.legend()
     plt.title(name)
 
@@ -187,14 +197,19 @@ def make_trend(feature, real, gen, name, calc_chi2=False, figsize=(8, 8)):
     img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
 
     if calc_chi2:
+        bins = np.linspace(
+            min(feature_real.min(), feature_gen.min()),
+            max(feature_real.max(), feature_gen.max()),
+            20
+        )
         (
             (real_mean, real_std),
             (real_mean_err, real_std_err)
-        ) = calc_trend(feature, real, do_plot=False, bins=20, window_size=1)
+        ) = calc_trend(feature_real, real, do_plot=False, bins=bins, window_size=1)
         (
             (gen_mean, gen_std),
             (gen_mean_err, gen_std_err)
-        ) = calc_trend(feature, gen, do_plot=False, bins=20, window_size=1)
+        ) = calc_trend(feature_gen, gen, do_plot=False, bins=bins, window_size=1)
 
         gen_upper = gen_mean + gen_std
         gen_lower = gen_mean - gen_std
