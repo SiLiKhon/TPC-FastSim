@@ -34,6 +34,7 @@ def main():
     parser.add_argument('--features_to_tail', action='store_true', default=False)
     parser.add_argument('--dropout_rate', type=float, default=0.2, required=False)
     parser.add_argument('--prediction_only', action='store_true', default=False)
+    parser.add_argument('--stochastic_stepping', action='store_true', default=False)
 
 
     args = parser.parse_args()
@@ -78,7 +79,8 @@ def main():
                                gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda,
                                num_additional_layers=args.num_additional_disc_layers,
                                cramer=args.cramer_gan, features_to_tail=args.features_to_tail,
-                               dropout_rate=args.dropout_rate)
+                               dropout_rate=args.dropout_rate,
+                               stochastic_stepping=args.stochastic_stepping)
 
     if args.prediction_only:
         def epoch_from_name(name):

@@ -113,7 +113,7 @@ class BaselineModel10x10:
     def __init__(self, activation=tf.keras.activations.relu, kernel_init='glorot_uniform',
                  dropout_rate=0.2, lr=1e-4, latent_dim=32, gp_lambda=10., num_disc_updates=3,
                  num_features=1, gpdata_lambda=0., num_additional_layers=0, cramer=False,
-                 features_to_tail=False):
+                 features_to_tail=False, stochastic_stepping=False):
         self.disc_opt = tf.keras.optimizers.RMSprop(lr)
         self.gen_opt = tf.keras.optimizers.RMSprop(lr)
         self.latent_dim = latent_dim
@@ -122,6 +122,7 @@ class BaselineModel10x10:
         self.num_disc_updates = num_disc_updates
         self.num_features = num_features
         self.cramer = cramer
+        self.stochastic_stepping = stochastic_stepping
 
         self.generator = get_generator(
             activation=activation, kernel_init=kernel_init, latent_dim=latent_dim, num_features=num_features
@@ -220,10 +221,19 @@ class BaselineModel10x10:
 
     @tf.function
     def training_step(self, feature_batch, target_batch):
-        if self.step_counter == self.num_disc_updates:
-            result = self.gen_step(feature_batch, target_batch)
-            self.step_counter.assign(0)
+        if self.stochastic_stepping:
+            if tf.random.uniform(
+                shape=[], dtype='int32',
+                maxval=self.num_disc_updates + 1
+            ) == self.num_disc_updates:
+                result = self.gen_step(feature_batch, target_batch)
+            else:
+                result = self.disc_step(feature_batch, target_batch)
         else:
-            result = self.disc_step(feature_batch, target_batch)
-            self.step_counter.assign_add(1)
+            if self.step_counter == self.num_disc_updates:
+                result = self.gen_step(feature_batch, target_batch)
+                self.step_counter.assign(0)
+            else:
+                result = self.disc_step(feature_batch, target_batch)
+                self.step_counter.assign_add(1)
         return result
