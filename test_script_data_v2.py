@@ -133,24 +133,25 @@ def main():
 
     unscale = lambda x: 10 ** x - 1
 
-    def get_images(return_raw_data=False, calc_chi2=False, gen_more=None):
+    def get_images(return_raw_data=False, calc_chi2=False, gen_more=None, sample=(X_test, Y_test)):
+        X, Y = sample
         if gen_more is None:
-            gen_features = X_test
+            gen_features = X
         else:
             gen_features = np.tile(
-                X_test,
-                [gen_more] + [1] * (X_test.ndim - 1)
+                X,
+                [gen_more] + [1] * (X.ndim - 1)
             )
         gen_scaled = model.make_fake(gen_features).numpy()
-        real = unscale(Y_test)
+        real = unscale(Y)
         gen = unscale(gen_scaled)
         gen[gen < 0] = 0
         gen1 = np.where(gen < 1., 0, gen)
-        images = make_metric_plots(real, gen, features={'angle' : (X_test, gen_features)}, calc_chi2=calc_chi2)
+        images = make_metric_plots(real, gen, features={'angle' : (X, gen_features)}, calc_chi2=calc_chi2)
         if calc_chi2:
             images, chi2 = images
 
-        images1 = make_metric_plots(real, gen1, features={'angle' : (X_test, gen_features)})
+        images1 = make_metric_plots(real, gen1, features={'angle' : (X, gen_features)})
 
         img_amplitude = make_histograms(Y_test.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True)
 
@@ -193,27 +194,37 @@ def main():
 
         array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
 
-        (
-            images, images1, img_amplitude,
-            gen_dataset, chi2
-        ) = get_images(calc_chi2=True, return_raw_data=True, gen_more=10)
-        for k, img in images.items():
-            array_to_img(img).save(str(prediction_path / f"{k}.png"))
-        for k, img in images.items():
-            array_to_img(img).save(str(prediction_path / f"{k}_amp_gt_1.png"))
-        array_to_img(img_amplitude).save(str(prediction_path / "log10_amp_p_1.png"))
+        for part in ['train', 'test']:
+            path = prediction_path / part
+            path.mkdir()
+            (
+                images, images1, img_amplitude,
+                gen_dataset, chi2
+            ) = get_images(
+                calc_chi2=True, return_raw_data=True, gen_more=10,
+                sample=(
+                    (X_train, Y_train) if part=='train'
+                    else (X_test, Y_test)
+                )
+            )
+            for k, img in images.items():
+                array_to_img(img).save(str(path / f"{k}.png"))
+            for k, img in images1.items():
+                array_to_img(img).save(str(path / f"{k}_amp_gt_1.png"))
+            array_to_img(img_amplitude).save(str(path / "log10_amp_p_1.png"))
 
-        with open(str(prediction_path / 'generated.dat'), 'w') as f:
-            for event_X, event_Y in zip(*gen_dataset):
-                f.write(f'params: {float(event_X):.3f} 16.941\n')
-                for ipad, time_distr in enumerate(event_Y, pad_range[0]):
-                    for itime, amp in enumerate(time_distr, time_range[0]):
-                        if amp < 1:
-                            continue
-                        f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
-                f.write('\n')
-        with open(str(prediction_path / 'stats'), 'w') as f:
-            f.write(f"{chi2:.2f}\n")
+            if part == 'test':
+                with open(str(path / 'generated.dat'), 'w') as f:
+                    for event_X, event_Y in zip(*gen_dataset):
+                        f.write(f'params: {float(event_X):.3f} 16.941\n')
+                        for ipad, time_distr in enumerate(event_Y, pad_range[0]):
+                            for itime, amp in enumerate(time_distr, time_range[0]):
+                                if amp < 1:
+                                    continue
+                                f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
+                        f.write('\n')
+            with open(str(path / 'stats'), 'w') as f:
+                f.write(f"{chi2:.2f}\n")
 
     else:
         train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
