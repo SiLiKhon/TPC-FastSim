@@ -35,9 +35,17 @@ def main():
     parser.add_argument('--dropout_rate', type=float, default=0.2, required=False)
     parser.add_argument('--prediction_only', action='store_true', default=False)
     parser.add_argument('--stochastic_stepping', action='store_true', default=False)
+    parser.add_argument('--feature_noise_power', type=float, default=None)
+    parser.add_argument('--feature_noise_decay', type=float, default=None)
 
 
     args = parser.parse_args()
+
+
+    assert (
+        (args.feature_noise_power is None) ==
+        (args.feature_noise_decay is None)
+    ), 'Noise power and decay must be both provided'
 
     print("")
     print("----" * 10)
@@ -133,7 +141,7 @@ def main():
 
     unscale = lambda x: 10 ** x - 1
 
-    def get_images(return_raw_data=False, calc_chi2=False, gen_more=None, sample=(X_test, Y_test)):
+    def get_images(return_raw_data=False, calc_chi2=False, gen_more=None, sample=(X_test, Y_test), batch_size=128):
         X, Y = sample
         if gen_more is None:
             gen_features = X
@@ -142,7 +150,10 @@ def main():
                 X,
                 [gen_more] + [1] * (X.ndim - 1)
             )
-        gen_scaled = model.make_fake(gen_features).numpy()
+        gen_scaled = np.concatenate([
+            model.make_fake(gen_features[i:i+batch_size]).numpy()
+            for i in range(0, len(gen_features), batch_size)
+        ], axis=0)
         real = unscale(Y)
         gen = unscale(gen_scaled)
         gen[gen < 0] = 0
@@ -227,10 +238,19 @@ def main():
                 f.write(f"{chi2:.2f}\n")
 
     else:
+        features_noise = None
+        if args.feature_noise_power is not None:
+            def features_noise(epoch):
+                current_power = args.feature_noise_power / (10**(epoch / args.feature_noise_decay))
+                with writer_train.as_default():
+                    tf.summary.scalar("features noise power", current_power, epoch)
+
+                return current_power
+
         train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
               train_writer=writer_train, val_writer=writer_val,
               callbacks=[write_hist_summary, save_model, schedule_lr],
-              features_train=X_train, features_val=X_test)
+              features_train=X_train, features_val=X_test, features_noise=features_noise)
 
 
 if __name__ == '__main__':

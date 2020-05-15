@@ -95,6 +95,9 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
 
 def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
     plots = {}
+    if calc_chi2:
+        chi2 = 0
+
     try:
         metric_real = get_val_metric_v(images_real)
         metric_gen  = get_val_metric_v(images_gen )
@@ -103,9 +106,6 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
                       for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T)})
 
         if features is not None:
-            if calc_chi2:
-                chi2 = 0
-
             for feature_name, (feature_real, feature_gen) in features.items():
                 for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
                     name = f'{metric_name} vs {feature_name}'
