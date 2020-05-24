@@ -49,15 +49,24 @@ def raw_to_csv(fname_in=None, fname_out=None):
     if 'params:' in lines[0]:
         assert len(lines) % 2 == 0, 'raw_to_csv: Odd number of lines when expected even'
 
-        reader_angles = Reader(
-            variables = ["crossing_angle", "dip_angle"],
-            types     = [float           , float      ]
-        )
+        if _VERSION == 'data_v2':
+            reader_features = Reader(
+                variables = ["crossing_angle", "dip_angle"],
+                types     = [float           , float      ]
+            )
+        elif _VERSION == 'data_v3':
+            reader_features = Reader(
+                variables = ["crossing_angle", "dip_angle", "drift_length"],
+                types     = [float           , float      , float         ]
+            )
+        else:
+            raise NotImplementedError
+
         lines, lines_angles = lines[1::2], lines[::2]
         lines_angles = [' '.join(l.split()[1:]) for l in lines_angles]
 
         data_sources = [lines, lines_angles]
-        readers = [reader_main, reader_angles]
+        readers = [reader_main, reader_features]
 
     for evt_id, lines_tuple in enumerate(zip(*data_sources)):
         for r, l in zip(readers, lines_tuple):
