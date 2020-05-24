@@ -78,10 +78,13 @@ def raw_to_csv(fname_in=None, fname_out=None):
 def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     if filename is None:
         filename = str(_THIS_PATH.joinpath(_VERSION, 'csv', 'digits.csv'))
-    
+
     df = pd.read_csv(filename)
 
     sel = lambda df, col, limits: (df[col] >= limits[0]) & (df[col] < limits[1])
+
+    if 'drift_length' in df.columns:
+        df['itime'] -= df['drift_length'].astype(int)
 
     selection = (
         sel(df, 'itime', time_range) &
@@ -105,7 +108,10 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     data = np.stack(g.apply(convert_event).values)
 
     if 'crossing_angle' in df.columns:
-        assert (g[['crossing_angle', 'dip_angle']].std() == 0).all().all(), 'Varying features within same events...'
-        return data, g[['crossing_angle', 'dip_angle']].mean().values
+        features = ['crossing_angle', 'dip_angle']
+        if 'drift_length' in df.columns:
+            features += ['drift_length']
+        assert (g[features].std() == 0).all().all(), 'Varying features within same events...'
+        return data, g[features].mean().values
 
     return data
