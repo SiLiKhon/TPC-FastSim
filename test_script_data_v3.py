@@ -231,16 +231,17 @@ def main():
                 array_to_img(img).save(str(path / f"{k}_amp_gt_1.png"))
             array_to_img(img_amplitude).save(str(path / "log10_amp_p_1.png"))
 
-#            if part == 'test':
-#                with open(str(path / 'generated.dat'), 'w') as f:
-#                    for event_X, event_Y in zip(*gen_dataset):
-#                        f.write(f'params: {float(event_X):.3f} 16.941\n')
-#                        for ipad, time_distr in enumerate(event_Y, pad_range[0]):
-#                            for itime, amp in enumerate(time_distr, time_range[0]):
-#                                if amp < 1:
-#                                    continue
-#                                f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
-#                        f.write('\n')
+            if part == 'test':
+                with open(str(path / 'generated.dat'), 'w') as f:
+                    for event_X, event_Y in zip(*gen_dataset):
+                        f.write('params: {:.3f} {:.3f} {:.3f}\n'.format(*event_X))
+                        for ipad, time_distr in enumerate(event_Y, pad_range[0]):
+                            for itime, amp in enumerate(time_distr, time_range[0] + event_X[2].astype(int)):
+                                if amp < 1:
+                                    continue
+                                f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
+                        f.write('\n')
+
             with open(str(path / 'stats'), 'w') as f:
                 f.write(f"{chi2:.2f}\n")
 
