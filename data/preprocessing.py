@@ -59,6 +59,11 @@ def raw_to_csv(fname_in=None, fname_out=None):
                 variables = ["crossing_angle", "dip_angle", "drift_length"],
                 types     = [float           , float      , float         ]
             )
+        elif _VERSION == 'data_v4':
+            reader_features = Reader(
+                variables = ["crossing_angle", "dip_angle", "drift_length", "pad_coordinate"],
+                types     = [float           , float      , float         , float           ]
+            )
         else:
             raise NotImplementedError
 
@@ -75,7 +80,7 @@ def raw_to_csv(fname_in=None, fname_out=None):
     result = pd.concat([r.build() for r in readers], axis=1).reset_index()
     result.to_csv(fname_out, index=False)
 
-def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
+def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict=True):
     if filename is None:
         filename = str(_THIS_PATH.joinpath(_VERSION, 'csv', 'digits.csv'))
 
@@ -86,13 +91,18 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
     if 'drift_length' in df.columns:
         df['itime'] -= df['drift_length'].astype(int)
 
+    if 'pad_coordinate' in df.columns:
+        df['ipad'] -= df['pad_coordinate'].astype(int)
+
     selection = (
         sel(df, 'itime', time_range) &
         sel(df, 'ipad' , pad_range )
     )
 
     if not selection.all():
-        print(f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data!")
+        msg = f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data!"
+        assert not strict, msg
+        print(msg)
 
     g = df[selection].groupby('evtId')
 
@@ -111,6 +121,8 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280)):
         features = ['crossing_angle', 'dip_angle']
         if 'drift_length' in df.columns:
             features += ['drift_length']
+        if 'pad_coordinate' in df.columns:
+            features += ['pad_coordinate']
         assert (g[features].std() == 0).all().all(), 'Varying features within same events...'
         return data, g[features].mean().values
 
