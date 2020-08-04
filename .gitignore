@@ -10,3 +10,4 @@ saved_models/
 .ipython/
 .bash_history
 .python_history
+*.pbtxt
