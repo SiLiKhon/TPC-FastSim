@@ -11,13 +11,13 @@
 
 Eigen::ThreadPool *tp;
 Eigen::ThreadPoolDevice *device;
-Graph *graph;
+GRAPH_CLASS *graph;
 
 extern "C" void model_init() {
   if (!tp) tp = new Eigen::ThreadPool(std::thread::hardware_concurrency());
   if (!device) device = new Eigen::ThreadPoolDevice(tp, tp->NumThreads());
   if (!graph) {
-    graph = new Graph;
+    graph = new GRAPH_CLASS;
     graph->set_thread_pool(device);
   }
 }

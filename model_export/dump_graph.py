@@ -4,9 +4,10 @@ import tensorflow as tf
 from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
 
+from . import tf2xla_pb2
 
 def model_to_graph(model, preprocess, postprocess, input_signature, output_file, test_input=None,
-        hack_upsampling=False):
+        hack_upsampling=False, batch_sizes=(1, 10, 100, 1000, 10000)):
     tf.keras.backend.set_learning_phase(0)
 
     @tf.function(input_signature=input_signature)
@@ -36,6 +37,23 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
         constant_graph.graph.as_graph_def(),
         path, filename
     )
+
+    for batch_size in batch_sizes:
+        config = tf2xla_pb2.Config()
+
+        for x in constant_graph.inputs:
+            shape = tf.TensorShape([batch_size] + list(x.shape)[1:])
+            feed = config.feed.add()
+            feed.id.node_name = x.op.name
+            feed.shape.MergeFrom(shape.as_proto())
+
+        for x in constant_graph.outputs:
+            fetch = config.fetch.add()
+            fetch.id.node_name = x.op.name
+
+        config_filename = Path(path) / f"{output_file.stem}-{batch_size}.config{output_file.suffix}"
+        with open(str(config_filename), 'w') as f:
+            f.write(str(config))
 
     if test_input is not None:
         print(to_save(

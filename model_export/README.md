@@ -8,7 +8,7 @@ cd tensorflow/
 ./configure
 # show path to python3 (/usr/bin/python3)
 # rest options to default
-BAZEL_LINKLIBS=-l%:libstdc++.a bazel build --local_resources 30000,15,1.0 -c opt model_v4:libmodel.so
+BAZEL_LINKLIBS=-l%:libstdc++.a bazel build --local_resources 30000,15,1.0 -c opt model_v4:all_models
 ```
 
 # Test:

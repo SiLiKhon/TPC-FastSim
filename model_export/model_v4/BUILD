@@ -1,18 +1,10 @@
-load("//tensorflow/compiler/aot:tfcompile.bzl", "tf_library")
+load(":model_export.bzl", "define_export_targets")
 
-tf_library(
-    name = 'graph',
-    config = 'graph.config.pbtxt',
-    cpp_class = 'Graph',
-    graph = 'graph.pbtxt',
-)
-
-cc_binary(
-    name = "libmodel.so",
-    srcs = ["model.cc", "graph.h", "model.h"],
-    deps = [":graph", "//third_party/eigen3"],
-    includes = ['.'],
-    linkopts = ["-lpthread"],
-    linkshared = 1,
-    copts = ["-fPIC"],
+define_export_targets()
+filegroup(
+    name = "all_models",
+    srcs = [
+        "libmodel_" + str(batch_size) + ".so"
+        for batch_size in [1, 10, 100, 1000, 10000]
+    ]
 )
