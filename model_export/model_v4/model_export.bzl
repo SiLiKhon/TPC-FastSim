@@ -18,5 +18,9 @@ def define_export_targets(
             includes = ['.', "graph_" + str(batch_size)],
             linkopts = ["-lpthread"],
             linkshared = 1,
-            copts = ["-fPIC", '-DGRAPH_CLASS=Graph_' + str(batch_size)],
+            copts = [
+                "-fPIC",
+                '-DGRAPH_CLASS=Graph_' + str(batch_size),
+                '-DBATCH_SIZE=' + str(batch_size)
+            ],
         )

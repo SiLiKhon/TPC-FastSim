@@ -13,6 +13,10 @@ Eigen::ThreadPool *tp;
 Eigen::ThreadPoolDevice *device;
 GRAPH_CLASS *graph;
 
+extern "C" int get_batch_size() {
+  return BATCH_SIZE;
+}
+
 extern "C" void model_init() {
   if (!tp) tp = new Eigen::ThreadPool(std::thread::hardware_concurrency());
   if (!device) device = new Eigen::ThreadPoolDevice(tp, tp->NumThreads());
