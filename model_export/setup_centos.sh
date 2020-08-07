@@ -1,4 +1,4 @@
-yum -y install git python3-dev python3-pip zip unzip which patch
+yum -y install git python3-devel.x86_64 python3-pip zip unzip which patch
 
 yum -y install centos-release-scl
 yum-config-manager --enable rhel-server-rhscl-7-rpms

@@ -1,5 +1,7 @@
 from pathlib import Path
+from time import perf_counter
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
@@ -7,7 +9,7 @@ from tensorflow.core.framework import attr_value_pb2
 from . import tf2xla_pb2
 
 def model_to_graph(model, preprocess, postprocess, input_signature, output_file, test_input=None,
-        hack_upsampling=False, batch_sizes=(1, 10, 100, 1000, 10000)):
+        hack_upsampling=False, batch_sizes=(1, 10, 100, 1000, 10000), perf_iterations=5):
     tf.keras.backend.set_learning_phase(0)
 
     @tf.function(input_signature=input_signature)
@@ -59,3 +61,23 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
         print(to_save(
             tf.convert_to_tensor([test_input])
         ))
+
+        for batch_size in batch_sizes[::-1]:
+            timings = []
+            iterations = perf_iterations * max(1, 100 // batch_size)
+            for i in range(perf_iterations):
+                batched_input = tf.random.normal(
+                    shape=(batch_size, len(test_input)),
+                    dtype='float32'
+                )
+                t0 = perf_counter()
+                result = to_save(batched_input).numpy()
+                t1 = perf_counter()
+                timings.append((t1 - t0) * 1000. / batch_size)
+
+            timings = np.array(timings)
+            mean = timings.mean()
+            err = timings.std() / (len(timings) - 1)**0.5
+            print(f'With batch size = {batch_size}, duration per 1 generation is: {mean} +\\- {err} ms')
+
+
