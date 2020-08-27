@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
+from tensorflow.python.tools import optimize_for_inference_lib
 
 from . import tf2xla_pb2
 
@@ -35,8 +36,15 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
     path = str(output_file.parent)
     filename = output_file.name
 
-    tf.io.write_graph(
+    optimized_graph = optimize_for_inference_lib.optimize_for_inference(
         constant_graph.graph.as_graph_def(),
+        [i.op.name for i in constant_graph.inputs],
+        [o.op.name for o in constant_graph.outputs],
+        tf.float32.as_datatype_enum
+    )
+
+    tf.io.write_graph(
+        optimized_graph,
         path, filename
     )
 

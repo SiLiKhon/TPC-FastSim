@@ -17,8 +17,11 @@ extern "C" int get_batch_size() {
   return BATCH_SIZE;
 }
 
-extern "C" void model_init() {
-  if (!tp) tp = new Eigen::ThreadPool(std::thread::hardware_concurrency());
+extern "C" void model_init(int num_threads) {
+  if (num_threads < 1) {
+    num_threads = std::thread::hardware_concurrency();
+  }
+  if (!tp) tp = new Eigen::ThreadPool(num_threads);
   if (!device) device = new Eigen::ThreadPoolDevice(tp, tp->NumThreads());
   if (!graph) {
     graph = new GRAPH_CLASS;
