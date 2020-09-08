@@ -10,7 +10,7 @@ import PIL
 
 from data import preprocessing
 from models.training import train
-from models.baseline_v4_8x16 import BaselineModel_8x16
+from models.baseline_fc_v4_8x16 import BaselineModel_8x16
 from metrics import make_metric_plots, make_histograms
 
 

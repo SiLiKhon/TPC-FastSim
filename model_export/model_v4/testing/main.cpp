@@ -8,16 +8,16 @@
 
 
 int main(int argc, char **argv) {
-  model_init();
+  model_init(1);
 
   int batch_size = get_batch_size();
 
   std::vector<float> input (batch_size * 4);
   for (int ib = 0; ib < batch_size; ++ib) {
-      input[4 * ib + 0] = 45.f;
-      input[4 * ib + 1] = 15.f;
-      input[4 * ib + 2] = 150.f;
-      input[4 * ib + 3] = 40.f;
+      input[4 * ib + 0] = 15.f; // crossing angle
+      input[4 * ib + 1] = 45.f; // dip angle
+      input[4 * ib + 2] = 150.f; // drift length
+      input[4 * ib + 3] = 42.f; // pad coordinate
   }
   std::vector<float> output(batch_size * 8 * 16, 0.f);
 
