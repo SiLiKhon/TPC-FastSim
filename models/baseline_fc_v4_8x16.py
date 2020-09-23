@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from . import scalers
+
 @tf.function(experimental_relax_shapes=True)
 def preprocess_features(features):
     # features:
@@ -145,6 +147,10 @@ class BaselineModel_8x16:
 #                               loss='mean_squared_error')
 #        self.discriminator.compile(optimizer=self.disc_opt,
 #                               loss='mean_squared_error')
+        self.scaler = scalers.Logarithmic()
+        self.pad_range = (-3, 5)
+        self.time_range = (-7, 9)
+        self.data_version = 'data_v4'
 
 
     @tf.function
