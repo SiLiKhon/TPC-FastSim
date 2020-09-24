@@ -1,0 +1,136 @@
+import tensorflow as tf
+
+
+def fully_connected_block(units, activations,
+                          kernel_init='glorot_uniform', input_shape=None,
+                          output_shape=None, dropouts=None, name=None):
+    assert len(units) == len(activations)
+    if dropouts:
+        assert len(dropouts) == len(units)
+
+    layers = []
+    for i, (size, act) in enumerate(zip(units, activations)):
+        args = dict(units=size, activation=act, kernel_initializer=kernel_init)
+        if i == 0 and input_shape:
+            args['input_shape'] = input_shape
+
+        layers.append(tf.keras.layers.Dense(**args))
+
+        if dropouts and dropouts[i]:
+            layers.append(tf.keras.layers.Dropout(dropouts[i]))
+
+    if output_shape:
+        layers.append(tf.keras.layers.Reshape(output_shape))
+
+    args = {}
+    if name:
+        args['name'] = name
+
+    return tf.keras.Sequential(layers, **args)
+
+
+
+def conv_block(filters, kernel_sizes, paddings, activations, poolings,
+               kernel_init='glorot_uniform', input_shape=None, output_shape=None,
+               dropouts=None, name=None):
+    assert len(filters) == len(kernel_sizes) == len(paddings) == len(activations) == len(poolings)
+    if dropouts:
+        assert len(dropouts) == len(filters)
+
+    layers = []
+    for i, (nfilt, ksize, padding, act, pool) in enumerate(zip(filters, kernel_sizes, paddings,
+                                                               activations, poolings)):
+        args = dict(filters=nfilt, kernel_size=ksize,
+                    padding=padding, activation=act, kernel_initializer=kernel_init)
+        if i == 0 and input_shape:
+            args['input_shape'] = input_shape
+
+        layers.append(tf.keras.layers.Conv2D(**args))
+
+        if dropouts and dropouts[i]:
+            layers.append(tf.keras.layers.Dropout(dropouts[i]))
+
+        if pool:
+            layers.append(tf.keras.layers.MaxPool2D(pool))
+
+    if output_shape:
+        layers.append(tf.keras.layers.Reshape(output_shape))
+
+    args = {}
+    if name:
+        args['name'] = name
+
+    return tf.keras.Sequential(layers, **args)
+
+
+def vector_img_connect_block(vector_shape, img_shape, block,
+                             vector_bypass=False, concat_outputs=True, name=None):
+    vector_shape = tuple(vector_shape)
+    img_shape = tuple(img_shape)
+
+    assert len(vector_shape) == 1
+    assert 2 <= len(img_shape) <= 3
+
+    input_vec = tf.keras.Input(shape=vector_shape)
+    input_img = tf.keras.Input(shape=img_shape)
+
+    block_input = input_img
+    if len(img_shape) == 2:
+        block_input = tf.keras.layers.Reshape(img_shape + (1,))(block_input)
+    if not vector_bypass:        
+        reshaped_vec = tf.tile(
+            tf.keras.layers.Reshape((1, 1) + vector_shape)(input_vec),
+            (1, *img_shape[:2], 1)
+        )
+        block_input = tf.keras.layers.Concatenate(axis=-1)([reshaped_vec, block_input])
+
+    block_output = block(block_input)
+
+    outputs = [input_vec, block_output]
+    if concat_outputs:
+        outputs = tf.keras.layers.Concatenate(axis=-1)(outputs)
+
+    args = dict(
+        inputs=[input_vec, input_img],
+        outputs=outputs,
+    )
+
+    if name:
+        args['name'] = name
+
+    return tf.keras.Model(**args)
+
+
+def build_block(block_type, arguments):
+    if block_type == 'fully_connected':
+        block = fully_connected_block(**arguments)
+    elif block_type == 'conv':
+        block = conv_block(**arguments)
+    elif block_type == 'connect':
+        inner_block = build_block(**arguments['block'])
+        arguments['block'] = inner_block
+        block = vector_img_connect_block(**arguments)
+    else:
+        raise(NotImplementedError(block_type))
+
+    return block
+
+def build_architecture(block_descriptions, name=None):
+    blocks = [build_block(**descr)
+              for descr in block_descriptions]
+
+    inputs = [
+        tf.keras.Input(shape=i.shape[1:])
+        for i in blocks[0].inputs
+    ]
+    outputs = inputs
+    for block in blocks:
+        outputs = block(outputs)
+
+    args = dict(
+        inputs=inputs,
+        outputs=outputs
+    )
+    if name:
+        args['name'] = name
+    return tf.keras.Model(**args)
