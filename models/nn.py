@@ -82,7 +82,7 @@ def vector_img_connect_block(vector_shape, img_shape, block,
             tf.keras.layers.Reshape((1, 1) + vector_shape)(input_vec),
             (1, *img_shape[:2], 1)
         )
-        block_input = tf.keras.layers.Concatenate(axis=-1)([reshaped_vec, block_input])
+        block_input = tf.keras.layers.Concatenate(axis=-1)([block_input, reshaped_vec])
 
     block_output = block(block_input)
 
