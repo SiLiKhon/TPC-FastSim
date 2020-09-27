@@ -1,12 +1,14 @@
 import os, sys
 import re
 from pathlib import Path
+import shutil
 import argparse
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import PIL
+import yaml
 
 from data import preprocessing
 from models.training import train
@@ -16,22 +18,11 @@ import cuda_gpu_config
 
 def make_parser():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
+    parser.add_argument('--config', type=str, required=False)
     parser.add_argument('--checkpoint_name', type=str, required=True)
-    parser.add_argument('--batch_size', type=int, default=32, required=False)
-    parser.add_argument('--lr', type=float, default=1e-4, required=False)
-    parser.add_argument('--num_disc_updates', type=int, default=8, required=False)
-    parser.add_argument('--lr_schedule_rate', type=float, default=0.999, required=False)
-    parser.add_argument('--save_every', type=int, default=50, required=False)
-    parser.add_argument('--num_epochs', type=int, default=10000, required=False)
-    parser.add_argument('--latent_dim', type=int, default=32, required=False)
     parser.add_argument('--gpu_num', type=str, required=False)
-    parser.add_argument('--gp_lambda', type=float, default=10., required=False)
-    parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
-    parser.add_argument('--cramer_gan', action='store_true', default=False)
     parser.add_argument('--prediction_only', action='store_true', default=False)
-    parser.add_argument('--stochastic_stepping', action='store_true', default=True)
-    parser.add_argument('--feature_noise_power', type=float, default=None)
-    parser.add_argument('--feature_noise_decay', type=float, default=None)
+
     return parser
 
 
@@ -48,27 +39,20 @@ def print_args(args):
 def parse_args():
     args = make_parser().parse_args()
 
-    assert (
-        (args.feature_noise_power is None) ==
-        (args.feature_noise_decay is None)
-    ), 'Noise power and decay must be both provided'
-
     print_args(args)
 
     return args
 
+def load_config(file):
+    with open(file, 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
 
-def write_args(model_path, fname='arguments.txt'):
-    with open(model_path / fname, 'w') as f:
-        raw_args = [a for a in sys.argv[1:] if a[0] != '@']
-        fnames = [a[1:] for a in sys.argv[1:] if a[0] == '@']
+    assert (
+        (config['feature_noise_power'] is None) ==
+        (config['feature_noise_decay'] is None)
+    ), 'Noise power and decay must be both provided'
 
-        f.write('\n'.join(raw_args))
-        f.write('\n')
-        for fname in fnames:
-            with open(fname, 'r') as f_in:
-                f.write(f_in.read())
-
+    return config
 
 def epoch_from_name(name):
     epoch, = re.findall('\d+', name)
@@ -243,15 +227,21 @@ def main():
 
     if args.prediction_only:
         assert model_path.exists(), "Couldn't find model directory"
+        assert not args.config, "Config should be read from model path when doing prediction"
+        args.config = str(model_path / 'config.yaml')
     else:
         assert not model_path.exists(), "Model directory already exists"
+        assert args.config, "No config provided"
+
         model_path.mkdir(parents=True)
+        config_destination = str(model_path / 'config.yaml')
+        shutil.copy(args.config, config_destination)
 
-        write_args(model_path)
+        args.config = config_destination
 
-    model = Model_v4(lr=args.lr, latent_dim=args.latent_dim, gp_lambda=args.gp_lambda,
-                     num_disc_updates=args.num_disc_updates, gpdata_lambda=args.gpdata_lambda,
-                     cramer=args.cramer_gan, stochastic_stepping=args.stochastic_stepping)
+    config = load_config(args.config)
+
+    model = Model_v4(config)
 
     if args.prediction_only:
         latest_gen_checkpoint, latest_disc_checkpoint = load_weights(model, model_path)
@@ -286,9 +276,9 @@ def main():
 
     else:
         features_noise = None
-        if args.feature_noise_power is not None:
+        if config['feature_noise_power'] is not None:
             def features_noise(epoch):
-                current_power = args.feature_noise_power / (10**(epoch / args.feature_noise_decay))
+                current_power = config['feature_noise_power'] / (10**(epoch / config['feature_noise_decay']))
                 with writer_train.as_default():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
@@ -296,17 +286,17 @@ def main():
 
 
         save_model = SaveModelCallback(
-            model=model, path=model_path, save_period=args.save_every
+            model=model, path=model_path, save_period=config['save_every']
         )
         write_hist_summary = WriteHistSummaryCallback(
             model, sample=(X_test, Y_test),
-            save_period=args.save_every, writer=writer_val
+            save_period=config['save_every'], writer=writer_val
         )
         schedule_lr = ScheduleLRCallback(
-            model, decay_rate=args.lr_schedule_rate, writer=writer_val
+            model, decay_rate=config['lr_schedule_rate'], writer=writer_val
         )
-        train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
-              train_writer=writer_train, val_writer=writer_val,
+        train(Y_train, Y_test, model.training_step, model.calculate_losses, config['num_epochs'],
+              config['batch_size'], train_writer=writer_train, val_writer=writer_val,
               callbacks=[write_hist_summary, save_model, schedule_lr],
               features_train=X_train, features_val=X_test, features_noise=features_noise)
 

@@ -1,5 +1,4 @@
 import tensorflow as tf
-import yaml
 
 from . import scalers, nn
 
@@ -38,29 +37,26 @@ def gen_loss_cramer(d_real, d_fake, d_fake_2):
     return -disc_loss_cramer(d_real, d_fake, d_fake_2)
 
 class Model_v4:
-    def __init__(self, description_file='models/architectures/baseline_fc_8x16.yaml',
-                 lr=1e-4, latent_dim=32, gp_lambda=10., num_disc_updates=8,
-                 gpdata_lambda=0., cramer=False, stochastic_stepping=True):
-        self.disc_opt = tf.keras.optimizers.RMSprop(lr)
-        self.gen_opt = tf.keras.optimizers.RMSprop(lr)
-        self.latent_dim = latent_dim
-        self.gp_lambda = gp_lambda
-        self.gpdata_lambda = gpdata_lambda
-        self.num_disc_updates = num_disc_updates
-        self.cramer = cramer
-        self.stochastic_stepping = stochastic_stepping
+    def __init__(self, config):
+        self.disc_opt = tf.keras.optimizers.RMSprop(config['lr'])
+        self.gen_opt = tf.keras.optimizers.RMSprop(config['lr'])
+        self.gp_lambda = config['gp_lambda']
+        self.gpdata_lambda = config['gpdata_lambda']
+        self.num_disc_updates = config['num_disc_updates']
+        self.cramer = config['cramer']
+        self.stochastic_stepping = config['stochastic_stepping']
+        self.latent_dim = config['latent_dim']
 
-        with open(description_file, 'r') as f:
-            architecture_descr = yaml.load(f, Loader=yaml.FullLoader)
+        architecture_descr = config['architecture']
         self.generator = nn.build_architecture(architecture_descr['generator'])
         self.discriminator = nn.build_architecture(architecture_descr['discriminator'])
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)
 
-        self.scaler = scalers.Logarithmic()
-        self.pad_range = (-3, 5)
-        self.time_range = (-7, 9)
-        self.data_version = 'data_v4'
+        self.scaler = scalers.get_scaler(config['scaler'])
+        self.pad_range = tuple(config['pad_range'])
+        self.time_range = tuple(config['time_range'])
+        self.data_version = config['data_version']
 
 
     @tf.function
