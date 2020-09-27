@@ -12,8 +12,9 @@ import yaml
 
 from data import preprocessing
 from models.training import train
+from models.callbacks import SaveModelCallback, WriteHistSummaryCallback, ScheduleLRCallback
 from models.model_v4 import Model_v4
-from metrics import make_metric_plots, make_histograms
+from metrics import evaluate_model
 import cuda_gpu_config
 
 def make_parser():
@@ -38,10 +39,9 @@ def print_args(args):
 
 def parse_args():
     args = make_parser().parse_args()
-
     print_args(args)
-
     return args
+
 
 def load_config(file):
     with open(file, 'r') as f:
@@ -53,6 +53,7 @@ def load_config(file):
     ), 'Noise power and decay must be both provided'
 
     return config
+
 
 def epoch_from_name(name):
     epoch, = re.findall('\d+', name)
@@ -81,141 +82,6 @@ def load_weights(model, model_path):
     model.discriminator.load_weights(str(latest_disc_checkpoint))
     
     return latest_gen_checkpoint, latest_disc_checkpoint
-
-
-def get_images(model,
-               sample,
-               return_raw_data=False,
-               calc_chi2=False,
-               gen_more=None,
-               batch_size=128):
-    X, Y = sample
-    assert X.ndim == 2
-    assert X.shape[1] == 4
-
-    if gen_more is None:
-        gen_features = X
-    else:
-        gen_features = np.tile(
-            X,
-            [gen_more] + [1] * (X.ndim - 1)
-        )
-    gen_scaled = np.concatenate([
-        model.make_fake(gen_features[i:i+batch_size]).numpy()
-        for i in range(0, len(gen_features), batch_size)
-    ], axis=0)
-    real = model.scaler.unscale(Y)
-    gen = model.scaler.unscale(gen_scaled)
-    gen[gen < 0] = 0
-    gen1 = np.where(gen < 1., 0, gen)
-
-    features = {
-        'crossing_angle' : (X[:, 0], gen_features[:,0]),
-        'dip_angle'      : (X[:, 1], gen_features[:,1]),
-        'drift_length'   : (X[:, 2], gen_features[:,2]),
-        'time_bin_fraction' : (X[:, 2] % 1, gen_features[:,2] % 1),
-        'pad_coord_fraction' : (X[:, 3] % 1, gen_features[:,3] % 1)
-    }
-
-    images = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2)
-    if calc_chi2:
-        images, chi2 = images
-
-    images1 = make_metric_plots(real, gen1, features=features)
-
-    img_amplitude = make_histograms(Y.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True)
-
-    result = [images, images1, img_amplitude]
-
-    if return_raw_data:
-        result += [(gen_features, gen)]
-
-    if calc_chi2:
-        result += [chi2]
-
-    return result
-
-
-class SaveModelCallback:
-    def __init__(self, model, path, save_period):
-        self.model = model
-        self.path = path
-        self.save_period = save_period
-    
-    def __call__(self, step):
-        if step % self.save_period == 0:
-            print(f'Saving model on step {step} to {self.path}')
-            self.model.generator.save(
-                str(self.path.joinpath("generator_{:05d}.h5".format(step))))
-            self.model.discriminator.save(
-                str(self.path.joinpath("discriminator_{:05d}.h5".format(step))))
-
-
-class WriteHistSummaryCallback:
-    def __init__(self, model, sample, save_period, writer):
-        self.model = model
-        self.sample = sample
-        self.save_period = save_period
-        self.writer = writer
-
-    def __call__(self, step):
-        if step % self.save_period == 0:
-            images, images1, img_amplitude, chi2 = get_images(self.model,
-                                                              sample=self.sample,
-                                                              calc_chi2=True)
-            with self.writer.as_default():
-                tf.summary.scalar("chi2", chi2, step)
-
-                for k, img in images.items():
-                    tf.summary.image(k, img, step)
-                for k, img in images1.items():
-                    tf.summary.image("{} (amp > 1)".format(k), img, step)
-                tf.summary.image("log10(amplitude + 1)", img_amplitude, step)
-
-
-class ScheduleLRCallback:
-    def __init__(self, model, decay_rate, writer):
-        self.model = model
-        self.decay_rate = decay_rate
-        self.writer = writer
-
-    def __call__(self, step):
-        self.model.disc_opt.lr.assign(self.model.disc_opt.lr * self.decay_rate)
-        self.model.gen_opt.lr.assign(self.model.gen_opt.lr * self.decay_rate)
-        with self.writer.as_default():
-            tf.summary.scalar("discriminator learning rate", self.model.disc_opt.lr, step)
-            tf.summary.scalar("generator learning rate", self.model.gen_opt.lr, step)
-
-
-def evaluate_model(model, path, sample, gen_sample_name=None):
-    path.mkdir()
-    (
-        images, images1, img_amplitude,
-        gen_dataset, chi2
-    ) = get_images(model, sample=sample,
-                   calc_chi2=True, return_raw_data=True, gen_more=10)
-
-    array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
-
-    for k, img in images.items():
-        array_to_img(img).save(str(path / f"{k}.png"))
-    for k, img in images1.items():
-        array_to_img(img).save(str(path / f"{k}_amp_gt_1.png"))
-    array_to_img(img_amplitude).save(str(path / "log10_amp_p_1.png"))
-
-    if gen_sample_name is not None:
-        with open(str(path / gen_sample_name), 'w') as f:
-            for event_X, event_Y in zip(*gen_dataset):
-                f.write('params: {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(*event_X))
-                for ipad, time_distr in enumerate(event_Y, model.pad_range[0] + event_X[3].astype(int)):
-                    for itime, amp in enumerate(time_distr, model.time_range[0] + event_X[2].astype(int)):
-                        if amp < 1:
-                            continue
-                        f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
-                f.write('\n')
-
-    with open(str(path / 'stats'), 'w') as f:
-        f.write(f"{chi2:.2f}\n")
 
 
 def main():
