@@ -29,6 +29,21 @@ def fully_connected_block(units, activations,
     return tf.keras.Sequential(layers, **args)
 
 
+def concat_block(input1_shape, input2_shape, reshape_input1=None,
+                 reshape_input2=None, axis=-1, name=None):
+    in1 = tf.keras.Input(shape=input1_shape)
+    in2 = tf.keras.Input(shape=input2_shape)
+    concat1, concat2 = in1, in2
+    if reshape_input1:
+        concat1 = tf.keras.layers.Reshape(reshape_input1)(concat1)
+    if reshape_input2:
+        concat2 = tf.keras.layers.Reshape(reshape_input2)(concat2)
+    out = tf.keras.layers.Concatenate(axis=axis)([concat1, concat2])
+    args = dict(inputs=[in1, in2], outputs=out)
+    if name:
+        args['name'] = name
+    return tf.keras.Model(**args)
+
 
 def conv_block(filters, kernel_sizes, paddings, activations, poolings,
                kernel_init='glorot_uniform', input_shape=None, output_shape=None,
@@ -110,10 +125,13 @@ def build_block(block_type, arguments):
         inner_block = build_block(**arguments['block'])
         arguments['block'] = inner_block
         block = vector_img_connect_block(**arguments)
+    elif block_type == 'concat':
+        block = concat_block(**arguments)
     else:
         raise(NotImplementedError(block_type))
 
     return block
+
 
 def build_architecture(block_descriptions, name=None):
     blocks = [build_block(**descr)
