@@ -1,0 +1,50 @@
+latent_dim: 32
+batch_size: 32
+lr: 1.e-4
+lr_schedule_rate: 0.999
+
+num_disc_updates: 8
+gp_lambda: 10.
+gpdata_lambda: 0.
+cramer: False
+stochastic_stepping: True
+
+save_every: 50
+num_epochs: 10000
+
+feature_noise_power: NULL
+feature_noise_decay: NULL
+
+data_version: 'data_v4'
+pad_range: [-3, 5]
+time_range: [-7, 9]
+scaler: 'gaussian'
+
+architecture:
+    generator:
+        - block_type: 'fully_connected'
+          arguments:
+            units: [32, 64, 64, 64, 6]
+            activations: ['relu', 'relu', 'relu', 'relu', NULL]
+            kernel_init: 'glorot_uniform'
+            input_shape: [37,]
+            output_shape: NULL
+            name: 'generator'
+
+    discriminator:
+        - block_type: 'concat'
+          arguments:
+            input1_shape: [5,]
+            input2_shape: [6,]
+            reshape_input1: NULL
+            reshape_input2: NULL
+            axis: -1
+            name: 'discriminator_concat'
+        - block_type: 'fully_connected'
+          arguments:
+            units: [32, 64, 64, 64, 128, 1]
+            activations: ['relu', 'relu', 'relu', 'relu', 'relu', NULL]
+            kernel_init: 'glorot_uniform'
+            input_shape: [11,]
+            output_shape: NULL
+            name: 'discriminator_head'

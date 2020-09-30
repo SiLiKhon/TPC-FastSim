@@ -68,7 +68,7 @@ class Model_v4:
         )
 
     def gradient_penalty(self, features, real, fake):
-        alpha = tf.random.uniform(shape=[len(real), 1, 1])
+        alpha = tf.random.uniform(shape=[len(real),] + [1] * (len(real.shape) - 1))
         interpolates = alpha * real + (1 - alpha) * fake
         with tf.GradientTape() as t:
             t.watch(interpolates)
