@@ -31,8 +31,8 @@ class Gaussian:
 
     def unscale(self, x):
         m0, m1, D00, D11, D01, logA = x.T
-        D00 = np.clip(D00, 0.1, None)
-        D11 = np.clip(D11, 0.1, None)
+        D00 = np.clip(D00, 0.05, None)
+        D11 = np.clip(D11, 0.05, None)
         D01 = np.clip(D01, -1., 1.)
         D01 *= D00 * D11
 
