@@ -1,5 +1,4 @@
 import os, sys
-import re
 from pathlib import Path
 import shutil
 import argparse
@@ -11,6 +10,7 @@ import PIL
 import yaml
 
 from data import preprocessing
+from models.utils import latest_epoch, load_weights
 from models.training import train
 from models.callbacks import SaveModelCallback, WriteHistSummaryCallback, ScheduleLRCallback
 from models.model_v4 import Model_v4
@@ -55,35 +55,6 @@ def load_config(file):
     return config
 
 
-def epoch_from_name(name):
-    epoch, = re.findall('\d+', name)
-    return int(epoch)
-
-
-def load_weights(model, model_path):
-    gen_checkpoints = model_path.glob("generator_*.h5")
-    disc_checkpoints = model_path.glob("discriminator_*.h5")
-    latest_gen_checkpoint = max(
-        gen_checkpoints,
-        key=lambda path: epoch_from_name(path.stem)
-    )
-    latest_disc_checkpoint = max(
-        disc_checkpoints,
-        key=lambda path: epoch_from_name(path.stem)
-    )
-
-    assert (
-        epoch_from_name(latest_gen_checkpoint.stem) == epoch_from_name(latest_disc_checkpoint.stem)
-    ), "Latest disc and gen epochs differ"
-
-    print(f'Loading generator weights from {str(latest_gen_checkpoint)}')
-    model.generator.load_weights(str(latest_gen_checkpoint))
-    print(f'Loading discriminator weights from {str(latest_disc_checkpoint)}')
-    model.discriminator.load_weights(str(latest_disc_checkpoint))
-    
-    return latest_gen_checkpoint, latest_disc_checkpoint
-
-
 def main():
     args = parse_args()
 
@@ -110,7 +81,7 @@ def main():
     model = Model_v4(config)
 
     if args.prediction_only:
-        latest_gen_checkpoint, latest_disc_checkpoint = load_weights(model, model_path)
+        load_weights(model, model_path)
 
     preprocessing._VERSION = model.data_version
     data, features = preprocessing.read_csv_2d(pad_range=model.pad_range, time_range=model.time_range)
@@ -126,7 +97,8 @@ def main():
 
 
     if args.prediction_only:
-        prediction_path = model_path / f"prediction_{epoch_from_name(latest_gen_checkpoint.stem):05d}"
+        epoch = latest_epoch(model_path)
+        prediction_path = model_path / f"prediction_{epoch:05d}"
         assert not prediction_path.exists(), "Prediction path already exists"
         prediction_path.mkdir()
 
