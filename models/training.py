@@ -41,16 +41,25 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
             for k, l in losses_train_batch.items():
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
         losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
-        
+
         tf.keras.backend.set_learning_phase(0)  # testing
-        
-        if features_train is None:
-            losses_val = {k : l.numpy() for k, l in loss_eval_fn(data_val).items()}
-        else:
-            losses_val = {k : l.numpy() for k, l in loss_eval_fn(features_val, data_val).items()}
+
+        losses_val = {}
+        for i_sample in trange(0, len(data_val), batch_size):
+            batch = data_val[i_sample:i_sample + batch_size]
+
+            if features_train is None:
+                losses_val_batch = {k : l.numpy() for k, l in loss_eval_fn(batch).items()}
+            else:
+                feature_batch = features_val[i_sample:i_sample + batch_size]
+                losses_val_batch = {k : l.numpy() for k, l in loss_eval_fn(feature_batch, batch).items()}
+            for k, l in losses_val_batch.items():
+                losses_val[k] = losses_val.get(k, 0) + l * len(batch)
+        losses_val = {k : l / len(data_val) for k, l in losses_val.items()}
+
         for f in callbacks:
             f(i_epoch)
-        
+
         if train_writer is not None:
             with train_writer.as_default():
                 for k, l in losses_train.items():
