@@ -75,7 +75,7 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
     buf.seek(0)
     
     img = PIL.Image.open(buf)
-    img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+    img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
     if calc_chi2:
         bins = np.linspace(

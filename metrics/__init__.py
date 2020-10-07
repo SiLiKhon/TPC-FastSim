@@ -31,7 +31,7 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     buf.seek(0)
     
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
 
 def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
@@ -110,6 +110,9 @@ def make_images_for_model(model,
 
     img_amplitude = make_histograms(Y.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True)
 
+    images['examples'] = plot_individual_images(Y, gen_scaled)
+    images['examples_mask'] = plot_images_mask(Y, gen_scaled)
+
     result = [images, images1, img_amplitude]
 
     if return_raw_data:
@@ -150,3 +153,59 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
 
     with open(str(path / 'stats'), 'w') as f:
         f.write(f"{chi2:.2f}\n")
+
+
+def plot_individual_images(real, gen, n=10):
+    assert real.ndim == 3 == gen.ndim
+    assert real.shape[1:] == gen.shape[1:]
+    N_max = min(len(real), len(gen))
+    assert n * 2 <= N_max
+
+    idx = np.sort(np.random.choice(N_max, n * 2, replace=False))
+    real = real[idx]
+    gen = gen[idx]
+
+    size_x = 12
+    size_y = size_x / real.shape[2] * real.shape[1] * n * 1.2 / 4
+
+    fig, axx = plt.subplots(n, 4, figsize=(size_x, size_y))
+    axx = [(ax[0], ax[1]) for ax in axx] + \
+          [(ax[2], ax[3]) for ax in axx]
+
+    for ax, img_real, img_fake in zip(axx, real, gen):
+        ax[0].imshow(img_real, aspect='auto')
+        ax[0].set_title("real")
+        ax[0].axis('off')
+        ax[1].imshow(img_fake, aspect='auto')
+        ax[1].set_title('generated')
+        ax[1].axis('off')
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = PIL.Image.open(buf)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
+
+
+def plot_images_mask(real, gen):
+    assert real.ndim == 3 == gen.ndim
+    assert real.shape[1:] == gen.shape[1:]
+
+    size_x = 6
+    size_y = size_x / real.shape[2] * real.shape[1] * 2.4
+
+    fig, [ax0, ax1] = plt.subplots(2, 1, figsize=(size_x, size_y))
+    ax0.imshow(real.any(axis=0), aspect='auto')
+    ax0.set_title("real")
+    ax1.imshow(gen.any(axis=0), aspect='auto')
+    ax1.set_title("generated")
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = PIL.Image.open(buf)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
