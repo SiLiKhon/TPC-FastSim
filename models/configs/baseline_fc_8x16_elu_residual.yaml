@@ -1,0 +1,73 @@
+latent_dim: 32
+batch_size: 32
+lr: 1.e-4
+lr_schedule_rate: 0.999
+
+num_disc_updates: 8
+gp_lambda: 10.
+gpdata_lambda: 0.
+cramer: False
+stochastic_stepping: True
+
+save_every: 50
+num_epochs: 10000
+
+feature_noise_power: NULL
+feature_noise_decay: NULL
+
+data_version: 'data_v4'
+pad_range: [-3, 5]
+time_range: [-7, 9]
+scaler: 'logarithmic'
+
+architecture:
+    generator:
+        - block_type: 'fully_connected'
+          arguments:
+            units: [32, 64, 64, 64, 128]
+            activations: ['elu', 'elu', 'elu', 'elu', 'elu']
+            kernel_init: 'glorot_uniform'
+            input_shape: [37,]
+            output_shape: [8, 16]
+            name: 'generator'
+
+    discriminator:
+        - block_type: 'connect'
+          arguments:
+            vector_shape: [5,]
+            img_shape: [8, 16]
+            vector_bypass: False
+            concat_outputs: True
+            name: 'discriminator_tail'
+            block:
+              block_type: 'conv'
+              arguments:
+                filters:      [ 8    , 16    , 32, 64    , 128   ]
+                kernel_sizes: [[2, 3], [2, 3],  1, [2, 3], [2, 3]]
+                paddings: ['valid', 'valid', 'valid', 'valid', 'valid']
+                activations: ['elu', 'elu', 'elu', 'elu', 'elu']
+                poolings: [NULL, NULL, 2, NULL, NULL]
+                kernel_init: glorot_uniform
+                input_shape: NULL
+                output_shape: [256,]
+                dropouts: [0.02, 0.02, 0.02, 0.02, 0.02]
+                name: discriminator_conv_block
+        - block_type: 'fully_connected_residual'
+          arguments:
+            units: 128
+            activations: ['elu', 'elu', 'elu', 'elu']
+            input_shape: [261,]
+            kernel_init: 'glorot_uniform'
+            batchnorm: True
+            output_shape: NULL
+            dropouts: [0.02, 0.02, 0.02, 0.02]
+            name: 'discriminator_head'
+        - block_type: 'fully_connected'
+          arguments:
+            units: [1]
+            activations: [NULL]
+            kernel_init: 'glorot_uniform'
+            input_shape: NULL
+            output_shape: NULL
+            name: 'discriminator_head_output'
+

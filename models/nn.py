@@ -29,6 +29,44 @@ def fully_connected_block(units, activations,
     return tf.keras.Sequential(layers, **args)
 
 
+def fully_connected_residual_block(units, activations, input_shape,
+                                   kernel_init='glorot_uniform', batchnorm=True,
+                                   output_shape=None, dropouts=None, name=None):
+    assert isinstance(units, int)
+    if dropouts:
+        assert len(dropouts) == len(activations)
+    else:
+        dropouts = [None] * len(activations)
+
+    def single_block(xx, units, activation, kernel_init, batchnorm, dropout):
+        xx = tf.keras.layers.Dense(units=units, kernel_initializer=kernel_init)(xx)
+        if batchnorm:
+            xx = tf.keras.layers.BatchNormalization()(xx)
+        xx = tf.keras.activations.get(activation)(xx)
+        if dropout:
+            xx = tf.keras.layers.Dropout(dropout)(xx)
+        return xx
+
+    input_tensor = tf.keras.Input(shape=input_shape)
+    xx = input_tensor
+    for i, (act, dropout) in enumerate(zip(activations, dropouts)):
+        args = dict(units=units, activation=act, kernel_init=kernel_init,
+                    batchnorm=batchnorm, dropout=dropout)
+        if len(xx.shape) == 2 and xx.shape[1] == units:
+            xx = xx + single_block(xx, **args)
+        else:
+            assert i == 0
+            xx = single_block(xx, **args)
+
+    if output_shape:
+        xx = tf.keras.layers.Reshape(output_shape)(xx)
+
+    args = dict(inputs=input_tensor, outputs=xx)
+    if name:
+        args['name'] = name
+    return tf.keras.Model(**args)
+
+
 def concat_block(input1_shape, input2_shape, reshape_input1=None,
                  reshape_input2=None, axis=-1, name=None):
     in1 = tf.keras.Input(shape=input1_shape)
@@ -127,6 +165,8 @@ def build_block(block_type, arguments):
         block = vector_img_connect_block(**arguments)
     elif block_type == 'concat':
         block = concat_block(**arguments)
+    elif block_type == 'fully_connected_residual':
+        block = fully_connected_residual_block(**arguments)
     else:
         raise(NotImplementedError(block_type))
 
