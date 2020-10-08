@@ -58,7 +58,7 @@ architecture:
             activations: ['elu', 'elu', 'elu', 'elu']
             input_shape: [261,]
             kernel_init: 'glorot_uniform'
-            batchnorm: True
+            batchnorm: False
             output_shape: NULL
             dropouts: [0.02, 0.02, 0.02, 0.02]
             name: 'discriminator_head'
