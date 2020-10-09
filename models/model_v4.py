@@ -36,6 +36,24 @@ def disc_loss_cramer(d_real, d_fake, d_fake_2):
 def gen_loss_cramer(d_real, d_fake, d_fake_2):
     return -disc_loss_cramer(d_real, d_fake, d_fake_2)
 
+
+def logloss(x):
+    return tf.where(x < -30., -x, tf.math.log(1. + tf.math.exp(-x)))
+
+
+def disc_loss_js(d_real, d_fake):
+    return tf.reduce_sum(
+        logloss(d_real)
+    ) + tf.reduce_sum(
+        logloss(-d_fake)
+    ) / (len(d_real) + len(d_fake))
+
+def gen_loss_js(d_real, d_fake):
+    return tf.reduce_mean(
+        logloss(d_fake)
+    )
+
+
 class Model_v4:
     def __init__(self, config):
         self.disc_opt = tf.keras.optimizers.RMSprop(config['lr'])
@@ -44,6 +62,9 @@ class Model_v4:
         self.gpdata_lambda = config['gpdata_lambda']
         self.num_disc_updates = config['num_disc_updates']
         self.cramer = config['cramer']
+        self.js = config.get('js', False)
+        assert not (self.js and self.cramer)
+
         self.stochastic_stepping = config['stochastic_stepping']
         self.latent_dim = config['latent_dim']
 
@@ -95,7 +116,10 @@ class Model_v4:
             d_fake_2 = self.discriminator([_f(feature_batch), fake_2])
 
         if not self.cramer:
-            d_loss = disc_loss(d_real, d_fake)
+            if self.js:
+                d_loss = disc_loss_js(d_real, d_fake)
+            else:
+                d_loss = disc_loss(d_real, d_fake)
         else:
             d_loss = disc_loss_cramer(d_real, d_fake, d_fake_2)
 
@@ -114,7 +138,10 @@ class Model_v4:
                 ) * self.gpdata_lambda
             )
         if not self.cramer:
-            g_loss = gen_loss(d_real, d_fake)
+            if self.js:
+                g_loss = gen_loss_js(d_real, d_fake)
+            else:
+                g_loss = gen_loss(d_real, d_fake)
         else:
             g_loss = gen_loss_cramer(d_real, d_fake, d_fake_2)
 
