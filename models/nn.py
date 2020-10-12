@@ -1,12 +1,22 @@
 import tensorflow as tf
 
 
+def get_activation(activation):
+    try:
+        activation = tf.keras.activations.get(activation)
+    except ValueError:
+        activation = eval(activation)
+    return activation
+
+
 def fully_connected_block(units, activations,
                           kernel_init='glorot_uniform', input_shape=None,
                           output_shape=None, dropouts=None, name=None):
     assert len(units) == len(activations)
     if dropouts:
         assert len(dropouts) == len(units)
+
+    activations = [get_activation(a) for a in activations]
 
     layers = []
     for i, (size, act) in enumerate(zip(units, activations)):
@@ -38,11 +48,13 @@ def fully_connected_residual_block(units, activations, input_shape,
     else:
         dropouts = [None] * len(activations)
 
+    activations = [get_activation(a) for a in activations]
+
     def single_block(xx, units, activation, kernel_init, batchnorm, dropout):
         xx = tf.keras.layers.Dense(units=units, kernel_initializer=kernel_init)(xx)
         if batchnorm:
             xx = tf.keras.layers.BatchNormalization()(xx)
-        xx = tf.keras.activations.get(activation)(xx)
+        xx = activation(xx)
         if dropout:
             xx = tf.keras.layers.Dropout(dropout)(xx)
         return xx
@@ -89,6 +101,8 @@ def conv_block(filters, kernel_sizes, paddings, activations, poolings,
     assert len(filters) == len(kernel_sizes) == len(paddings) == len(activations) == len(poolings)
     if dropouts:
         assert len(dropouts) == len(filters)
+
+    activations = [get_activation(a) for a in activations]
 
     layers = []
     for i, (nfilt, ksize, padding, act, pool) in enumerate(zip(filters, kernel_sizes, paddings,
