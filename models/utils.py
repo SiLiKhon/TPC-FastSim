@@ -27,10 +27,8 @@ def load_weights(model, model_path, epoch=None):
     if epoch is None:
         epoch = latest_epoch(model_path)
 
-    latest_gen_checkpoint = model_path / f"generator_{epoch:05d}.h5"
-    latest_disc_checkpoint = model_path / f"discriminator_{epoch:05d}.h5"
+    gen_checkpoint = model_path / f"generator_{epoch:05d}.h5"
+    disc_checkpoint = model_path / f"discriminator_{epoch:05d}.h5"
 
-    print(f'Loading generator weights from {str(latest_gen_checkpoint)}')
-    model.generator.load_weights(str(latest_gen_checkpoint))
-    print(f'Loading discriminator weights from {str(latest_disc_checkpoint)}')
-    model.discriminator.load_weights(str(latest_disc_checkpoint))
+    model.load_generator(gen_checkpoint)
+    model.load_discriminator(disc_checkpoint)

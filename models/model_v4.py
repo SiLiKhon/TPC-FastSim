@@ -1,4 +1,7 @@
+import h5py
 import tensorflow as tf
+from tensorflow.python.keras.saving import hdf5_format
+
 
 from . import scalers, nn
 
@@ -78,6 +81,42 @@ class Model_v4:
         self.pad_range = tuple(config['pad_range'])
         self.time_range = tuple(config['time_range'])
         self.data_version = config['data_version']
+
+        self.generator.compile(optimizer=self.gen_opt, loss='mean_squared_error')
+        self.discriminator.compile(optimizer=self.disc_opt, loss='mean_squared_error')
+
+    def load_generator(self, checkpoint):
+        self._load_weights(checkpoint, 'gen')
+
+    def load_discriminator(self, checkpoint):
+        self._load_weights(checkpoint, 'disc')
+
+    def _load_weights(self, checkpoint, gen_or_disc):
+        if gen_or_disc == 'gen':
+            network = self.generator
+            step_fn = self.gen_step
+        elif gen_or_disc == 'disc':
+            network = self.discriminator
+            step_fn = self.disc_step
+        else:
+            raise ValueError(gen_or_disc)
+
+        model_file = h5py.File(checkpoint, 'r')
+        if len(network.optimizer.weights) == 0 and 'optimizer_weights' in model_file:
+            # perform single optimization step to init optimizer weights
+            features_shape = self.discriminator.inputs[0].shape.as_list()
+            targets_shape = self.discriminator.inputs[1].shape.as_list()
+            features_shape[0], targets_shape[0] = 1, 1
+            step_fn(tf.zeros(features_shape), tf.zeros(targets_shape))
+
+        print(f'Loading {gen_or_disc} weights from {str(checkpoint)}')
+        network.load_weights(str(checkpoint))
+
+        if 'optimizer_weights' in model_file:
+            opt_weight_values = hdf5_format.load_optimizer_weights_from_hdf5_group(
+                model_file
+            )
+            network.optimizer.set_weights(opt_weight_values)
 
 
     @tf.function
