@@ -1,5 +1,6 @@
 docker run -it \
   -u $(id -u):$(id -g) \
+  --rm \
   --env HOME=`pwd` \
   -p 127.0.0.1:6126:6006/tcp \
   --runtime nvidia \
