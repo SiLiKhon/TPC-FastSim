@@ -12,7 +12,7 @@ import yaml
 from data import preprocessing
 from models.utils import latest_epoch, load_weights
 from models.training import train
-from models.callbacks import SaveModelCallback, WriteHistSummaryCallback, ScheduleLRCallback
+from models.callbacks import SaveModelCallback, WriteHistSummaryCallback, ScheduleLRCallback, get_scheduler
 from models.model_v4 import Model_v4
 from metrics import evaluate_model
 import cuda_gpu_config
@@ -52,6 +52,11 @@ def load_config(file):
         (config['feature_noise_decay'] is None)
     ), 'Noise power and decay must be both provided'
 
+    if 'lr_disc' not in config: config['lr_disc'] = config['lr']
+    if 'lr_gen'  not in config: config['lr_gen' ] = config['lr']
+    if 'lr_schedule_rate_disc' not in config: config['lr_schedule_rate_disc'] = config['lr_schedule_rate']
+    if 'lr_schedule_rate_gen'  not in config: config['lr_schedule_rate_gen' ] = config['lr_schedule_rate']
+
     return config
 
 
@@ -62,26 +67,29 @@ def main():
 
     model_path = Path('saved_models') / args.checkpoint_name
 
+    config_path = str(model_path / 'config.yaml')
+    continue_training = False
     if args.prediction_only:
         assert model_path.exists(), "Couldn't find model directory"
         assert not args.config, "Config should be read from model path when doing prediction"
-        args.config = str(model_path / 'config.yaml')
     else:
-        assert not model_path.exists(), "Model directory already exists"
-        assert args.config, "No config provided"
+        if not args.config:
+            assert model_path.exists(), "Couldn't find model directory"
+            continue_training = True
+        else:
+            assert not model_path.exists(), "Model directory already exists"
 
-        model_path.mkdir(parents=True)
-        config_destination = str(model_path / 'config.yaml')
-        shutil.copy(args.config, config_destination)
+            model_path.mkdir(parents=True)
+            shutil.copy(args.config, config_path)
 
-        args.config = config_destination
-
+    args.config = config_path
     config = load_config(args.config)
 
     model = Model_v4(config)
 
-    if args.prediction_only:
-        load_weights(model, model_path)
+    next_epoch = 0
+    if args.prediction_only or continue_training:
+        next_epoch = load_weights(model, model_path) + 1
 
     preprocessing._VERSION = model.data_version
     data, features = preprocessing.read_csv_2d(pad_range=model.pad_range, time_range=model.time_range)
@@ -131,12 +139,18 @@ def main():
             save_period=config['save_every'], writer=writer_val
         )
         schedule_lr = ScheduleLRCallback(
-            model, decay_rate=config['lr_schedule_rate'], writer=writer_val
+            model, writer=writer_val,
+            func_gen=get_scheduler(config['lr_gen'], config['lr_schedule_rate_gen']),
+            func_disc=get_scheduler(config['lr_disc'], config['lr_schedule_rate_disc'])
         )
+        if continue_training:
+            schedule_lr(next_epoch - 1)
+
         train(Y_train, Y_test, model.training_step, model.calculate_losses, config['num_epochs'],
               config['batch_size'], train_writer=writer_train, val_writer=writer_val,
-              callbacks=[write_hist_summary, save_model, schedule_lr],
-              features_train=X_train, features_val=X_test, features_noise=features_noise)
+              callbacks=[schedule_lr, save_model, write_hist_summary],
+              features_train=X_train, features_val=X_test, features_noise=features_noise,
+              first_epoch=next_epoch)
 
 
 if __name__ == '__main__':

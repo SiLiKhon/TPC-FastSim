@@ -59,8 +59,8 @@ def gen_loss_js(d_real, d_fake):
 
 class Model_v4:
     def __init__(self, config):
-        self.disc_opt = tf.keras.optimizers.RMSprop(config['lr'])
-        self.gen_opt = tf.keras.optimizers.RMSprop(config['lr'])
+        self.disc_opt = tf.keras.optimizers.RMSprop(config['lr_disc'])
+        self.gen_opt = tf.keras.optimizers.RMSprop(config['lr_gen'])
         self.gp_lambda = config['gp_lambda']
         self.gpdata_lambda = config['gpdata_lambda']
         self.num_disc_updates = config['num_disc_updates']
@@ -113,6 +113,7 @@ class Model_v4:
         network.load_weights(str(checkpoint))
 
         if 'optimizer_weights' in model_file:
+            print('Also recovering the optimizer state')
             opt_weight_values = hdf5_format.load_optimizer_weights_from_hdf5_group(
                 model_file
             )

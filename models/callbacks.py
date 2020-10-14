@@ -40,14 +40,24 @@ class WriteHistSummaryCallback:
 
 
 class ScheduleLRCallback:
-    def __init__(self, model, decay_rate, writer):
+    def __init__(self, model, func_gen, func_disc, writer):
         self.model = model
-        self.decay_rate = decay_rate
+        self.func_gen = func_gen
+        self.func_disc = func_disc
         self.writer = writer
 
     def __call__(self, step):
-        self.model.disc_opt.lr.assign(self.model.disc_opt.lr * self.decay_rate)
-        self.model.gen_opt.lr.assign(self.model.gen_opt.lr * self.decay_rate)
+        self.model.disc_opt.lr.assign(self.func_disc(step))
+        self.model.gen_opt.lr.assign(self.func_gen(step))
         with self.writer.as_default():
             tf.summary.scalar("discriminator learning rate", self.model.disc_opt.lr, step)
             tf.summary.scalar("generator learning rate", self.model.gen_opt.lr, step)
+
+
+def get_scheduler(lr, lr_decay):
+    if isinstance(lr_decay, str):
+        return eval(lr_decay)
+
+    def schedule_lr(step):
+        return lr * lr_decay**step
+    return schedule_lr

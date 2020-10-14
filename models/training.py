@@ -5,12 +5,12 @@ from tqdm import trange
 
 def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size,
           train_writer=None, val_writer=None, callbacks=[], features_train=None, features_val=None,
-          features_noise=None):
+          features_noise=None, first_epoch=0):
     if not ((features_train is None) or (features_val is None)):
         assert features_train is not None, 'train: features should be provided for both train and val'
         assert features_val is not None, 'train: features should be provided for both train and val'
 
-    for i_epoch in range(num_epochs):
+    for i_epoch in range(first_epoch, num_epochs):
         print("Working on epoch #{}".format(i_epoch), flush=True)
 
         tf.keras.backend.set_learning_phase(1)  # training

@@ -32,3 +32,5 @@ def load_weights(model, model_path, epoch=None):
 
     model.load_generator(gen_checkpoint)
     model.load_discriminator(disc_checkpoint)
+
+    return epoch
