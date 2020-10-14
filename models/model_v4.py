@@ -41,7 +41,7 @@ def gen_loss_cramer(d_real, d_fake, d_fake_2):
 
 
 def logloss(x):
-    return tf.where(x < -30., -x, tf.math.log(1. + tf.math.exp(-x)))
+    return tf.nn.softplus(-x)
 
 
 def disc_loss_js(d_real, d_fake):
@@ -69,6 +69,11 @@ class Model_v4:
         assert not (self.js and self.cramer)
 
         self.stochastic_stepping = config['stochastic_stepping']
+        self.dynamic_stepping = config.get('dynamic_stepping', False)
+        if self.dynamic_stepping:
+            assert not self.stochastic_stepping
+            self.dynamic_stepping_threshold = config['dynamic_stepping_threshold']
+
         self.latent_dim = config['latent_dim']
 
         architecture_descr = config['architecture']
@@ -225,5 +230,9 @@ class Model_v4:
                 self.step_counter.assign(0)
             else:
                 result = self.disc_step(feature_batch, target_batch)
-                self.step_counter.assign_add(1)
+                if self.dynamic_stepping:
+                    if result['disc_loss'] < self.dynamic_stepping_threshold:
+                        self.step_counter.assign(self.num_disc_updates)
+                else:
+                    self.step_counter.assign_add(1)
         return result
