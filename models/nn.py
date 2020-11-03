@@ -2,6 +2,9 @@ import tensorflow as tf
 import numpy as np
 
 
+custom_objects = {}
+
+
 def get_activation(activation):
     try:
         activation = tf.keras.activations.get(activation)
@@ -188,7 +191,12 @@ def build_block(block_type, arguments):
     return block
 
 
-def build_architecture(block_descriptions, name=None):
+def build_architecture(block_descriptions, name=None, custom_objects_code=None):
+    if custom_objects_code:
+        print("build_architecture(): got custom objects code, executing:")
+        print(custom_objects_code)
+        exec(custom_objects_code, globals(), custom_objects)
+
     blocks = [build_block(**descr)
               for descr in block_descriptions]
 

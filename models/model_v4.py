@@ -77,8 +77,10 @@ class Model_v4:
         self.latent_dim = config['latent_dim']
 
         architecture_descr = config['architecture']
-        self.generator = nn.build_architecture(architecture_descr['generator'])
-        self.discriminator = nn.build_architecture(architecture_descr['discriminator'])
+        self.generator = nn.build_architecture(architecture_descr['generator'],
+                                               custom_objects_code=config.get('custom_objects', None))
+        self.discriminator = nn.build_architecture(architecture_descr['discriminator'],
+                                                   custom_objects_code=config.get('custom_objects', None))
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)
 

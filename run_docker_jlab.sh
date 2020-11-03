@@ -6,6 +6,7 @@ else
 fi
 
 docker run -it \
+  --rm \
   -u $(id -u):$(id -g) \
   --env HOME=`pwd` \
   -p 127.0.0.1:$PORT:8888/tcp \
