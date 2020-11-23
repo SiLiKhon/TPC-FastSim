@@ -51,7 +51,7 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     return (mean, std), (mean_err, std_err)
 
 
-def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8)):
+def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8), pdffile=None):
     feature_real = feature_real.squeeze()
     feature_gen = feature_gen.squeeze()
     real = real.squeeze()
@@ -71,6 +71,7 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
+    if pdffile is not None: fig.savefig(pdffile, format='pdf')
     plt.close(fig)
     buf.seek(0)
     
