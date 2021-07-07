@@ -7,71 +7,12 @@ import matplotlib.pyplot as plt
 import PIL
 
 
-from plotting import _bootstrap_error
+from .plotting import _bootstrap_error
+from .gaussian_metrics import get_val_metric_v, _METRIC_NAMES
+from .trends import make_trend_plot
 
 
-def _gaussian_fit(img):
-    assert img.ndim == 2, '_gaussian_fit: Wrong image dimentions'
-    assert (img >= 0).all(), '_gaussian_fit: negative image content'
-    assert (img > 0).any(), '_gaussian_fit: blank image'
-    img_n = img / img.sum()
-
-    mu = np.fromfunction(
-        lambda i, j: (img_n[np.newaxis,...] * np.stack([i, j])).sum(axis=(1, 2)),
-        shape=img.shape
-    )
-    cov = np.fromfunction(
-        lambda i, j: (
-            (img_n[np.newaxis,...] * np.stack([i * i, j * i, i * j, j * j])).sum(axis=(1, 2))
-        ) - np.stack([mu[0]**2, mu[0]*mu[1], mu[0]*mu[1], mu[1]**2]),
-        shape=img.shape
-    ).reshape(2, 2)
-    return mu, cov
-
-
-def _get_val_metric_single(img):
-    """Returns a vector of gaussian fit results to the image.
-    The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
-    """
-    assert img.ndim == 2, '_get_val_metric_single: Wrong image dimentions'
-
-    img = np.where(img < 0, 0, img)
-
-    mu, cov = _gaussian_fit(img)
-
-    return np.array((*mu, *cov.diagonal(), cov[0, 1], img.sum()))
-
-
-_METRIC_NAMES = ['Mean0', 'Mean1', 'Sigma0^2', 'Sigma1^2', 'Cov01', 'Sum']
-
-
-get_val_metric = np.vectorize(_get_val_metric_single, signature='(m,n)->(k)')
-
-
-def get_val_metric_v(imgs):
-    """Returns a vector of gaussian fit results to the image.
-    The components are: [mu0, mu1, sigma0^2, sigma1^2, covariance, integral]
-    """
-    assert imgs.ndim == 3, 'get_val_metric_v: Wrong images dimentions'
-    assert (imgs >= 0).all(), 'get_val_metric_v: Negative image content'
-    assert (imgs > 0).any(axis=(1, 2)).all(), 'get_val_metric_v: some images are empty'
-    imgs_n = imgs / imgs.sum(axis=(1, 2), keepdims=True)
-    mu = np.fromfunction(
-        lambda i, j: (imgs_n[:,np.newaxis,...] * np.stack([i, j])[np.newaxis,...]).sum(axis=(2, 3)),
-        shape=imgs.shape[1:]
-    )
-
-    cov = np.fromfunction(
-        lambda i, j: (
-            (imgs_n[:,np.newaxis,...] * np.stack([i * i, j * j, i * j])[np.newaxis,...]).sum(axis=(2, 3))
-        ) - np.stack([mu[:,0]**2, mu[:,1]**2, mu[:,0] * mu[:,1]]).T,
-        shape=imgs.shape[1:]
-    )
-
-    return np.concatenate([mu, cov, imgs.sum(axis=(1, 2))[:,np.newaxis]], axis=1)
-
-
-def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy=False):
+def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy=False, pdffile=None):
     l = min(data_real.min(), data_gen.min())
     r = max(data_real.max(), data_gen.max())
     bins = np.linspace(l, r, n_bins + 1)
@@ -86,15 +27,17 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
+    if pdffile is not None: fig.savefig(pdffile, format='pdf')
     plt.close(fig)
     buf.seek(0)
     
     img = PIL.Image.open(buf)
-    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
 
-def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
+def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False):
     plots = {}
+    if make_pdfs: pdf_plots = {}
     if calc_chi2:
         chi2 = 0
 
@@ -102,128 +45,221 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False):
         metric_real = get_val_metric_v(images_real)
         metric_gen  = get_val_metric_v(images_gen )
     
-        plots.update({name : make_histograms(real, gen, name)
-                      for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T)})
+        for name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
+            pdffile = None
+            if make_pdfs:
+                pdffile = io.BytesIO()
+                pdf_plots[name] = pdffile
+            plots[name] = make_histograms(real, gen, name, pdffile=pdffile)
+
 
         if features is not None:
             for feature_name, (feature_real, feature_gen) in features.items():
                 for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
                     name = f'{metric_name} vs {feature_name}'
+                    pdffile = None
+                    if make_pdfs:
+                        pdffile = io.BytesIO()
+                        pdf_plots[name] = pdffile
                     if calc_chi2 and (metric_name != "Sum"):
-                        plots[name], chi2_i = make_trend(feature_real, real,
-                                                         feature_gen, gen,
-                                                         name, calc_chi2=True)
+                        plots[name], chi2_i = make_trend_plot(feature_real, real,
+                                                              feature_gen, gen,
+                                                              name, calc_chi2=True,
+                                                              pdffile=pdffile)
                         chi2 += chi2_i
                     else:
-                        plots[name] = make_trend(feature_real, real,
-                                                 feature_gen, gen, name)
+                        plots[name] = make_trend_plot(feature_real, real,
+                                                      feature_gen, gen, name, pdffile=pdffile)
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
 
+    result = {'plots' : plots}
     if calc_chi2:
-        return plots, chi2
+        result['chi2'] = chi2
+    if make_pdfs:
+        result['pdf_plots'] = pdf_plots
 
-    return plots
+    return result
 
-def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
-    assert x.ndim == 1, 'calc_trend: wrong x dim'
-    assert y.ndim == 1, 'calc_trend: wrong y dim'
 
-    if 'alpha' not in kwargs:
-        kwargs['alpha'] = 0.7
+def make_images_for_model(model,
+                          sample,
+                          return_raw_data=False,
+                          calc_chi2=False,
+                          gen_more=None,
+                          batch_size=128,
+                          pdf_outputs=None):
+    X, Y = sample
+    assert X.ndim == 2
+    assert X.shape[1] == 4
+    make_pdfs = (pdf_outputs is not None)
+    if make_pdfs:
+        assert isinstance(pdf_outputs, list)
+        assert len(pdf_outputs) == 0
 
-    if isinstance(bins, int):
-        bins = np.linspace(np.min(x), np.max(x), bins + 1)
-    sel = (x >= bins[0])
-    x, y = x[sel], y[sel]
-    cats = (x[:,np.newaxis] < bins[np.newaxis,1:]).argmax(axis=1)
-    
-    def stats(arr):
-        return (
-            arr.mean(),
-            arr.std() / (len(arr) - 1)**0.5,
-            arr.std(),
-            _bootstrap_error(arr, np.std)
+    if gen_more is None:
+        gen_features = X
+    else:
+        gen_features = np.tile(
+            X,
+            [gen_more] + [1] * (X.ndim - 1)
         )
-    
-    mean, mean_err, std, std_err, bin_centers = np.array([
-        stats(
-            y[(cats >= left) & (cats < right)]
-        ) + ((bins[left] + bins[right]) / 2,) for left, right in zip(
-            range(len(bins) - window_size),
-            range(window_size, len(bins))
-        )
-    ]).T
+    gen_scaled = np.concatenate([
+        model.make_fake(gen_features[i:i+batch_size]).numpy()
+        for i in range(0, len(gen_features), batch_size)
+    ], axis=0)
+    real = model.scaler.unscale(Y)
+    gen = model.scaler.unscale(gen_scaled)
+    gen[gen < 0] = 0
+    gen1 = np.where(gen < 1., 0, gen)
+
+    features = {
+        'crossing_angle' : (X[:, 0], gen_features[:,0]),
+        'dip_angle'      : (X[:, 1], gen_features[:,1]),
+        'drift_length'   : (X[:, 2], gen_features[:,2]),
+        'time_bin_fraction' : (X[:, 2] % 1, gen_features[:,2] % 1),
+        'pad_coord_fraction' : (X[:, 3] % 1, gen_features[:,3] % 1)
+    }
+
+    metric_plot_results = make_metric_plots(real, gen, features=features,
+                                            calc_chi2=calc_chi2, make_pdfs=make_pdfs)
+    images = metric_plot_results['plots']
+    if calc_chi2:
+        chi2 = metric_plot_results['chi2']
+    if make_pdfs:
+        images_pdf = metric_plot_results['pdf_plots']
+        pdf_outputs.append(images_pdf)
+
+    metric_plot_results1 = make_metric_plots(real, gen1, features=features, make_pdfs=make_pdfs)
+    images1 = metric_plot_results1['plots']
+    if make_pdfs:
+        pdf_outputs.append(metric_plot_results1['pdf_plots'])
+
+    pdffile = None
+    if make_pdfs:
+        pdffile = io.BytesIO()
+        pdf_outputs.append(pdffile)
+    img_amplitude = make_histograms(Y.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True,
+                                    pdffile=pdffile)
+
+    pdffile_examples = None
+    pdffile_examples_mask = None
+    if make_pdfs:
+        pdffile_examples = io.BytesIO()
+        pdffile_examples_mask = io.BytesIO()
+        images_pdf['examples'] = pdffile_examples
+        images_pdf['examples_mask'] = pdffile_examples_mask
+    images['examples'] = plot_individual_images(Y, gen_scaled, pdffile=pdffile_examples)
+    images['examples_mask'] = plot_images_mask(Y, gen_scaled, pdffile=pdffile_examples_mask)
+
+    result = [images, images1, img_amplitude]
+
+    if return_raw_data:
+        result += [(gen_features, gen)]
+
+    if calc_chi2:
+        result += [chi2]
+
+    return result
 
 
-    if do_plot:
-        mean_p_std_err = (mean_err**2 + std_err**2)**0.5
-        plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
-        kwargs['alpha'] *= 0.5
-        kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
-        plt.fill_between(bin_centers, mean - std - mean_p_std_err, mean - std + mean_p_std_err, **kwargs)
-        plt.fill_between(bin_centers, mean + std - mean_p_std_err, mean + std + mean_p_std_err, **kwargs)
-        kwargs['alpha'] *= 0.25
-        plt.fill_between(bin_centers, mean - std + mean_p_std_err, mean + std - mean_p_std_err, **kwargs)
+def evaluate_model(model, path, sample, gen_sample_name=None):
+    path.mkdir()
+    pdf_outputs = []
+    (
+        images, images1, img_amplitude,
+        gen_dataset, chi2
+    ) = make_images_for_model(model, sample=sample,
+                              calc_chi2=True, return_raw_data=True, gen_more=10, pdf_outputs=pdf_outputs)
+    images_pdf, images1_pdf, img_amplitude_pdf = pdf_outputs
 
-    return (mean, std), (mean_err, std_err)
+    array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
+
+    for k, img in images.items():
+        array_to_img(img).save(str(path / f"{k}.png"))
+    for k, img in images1.items():
+        array_to_img(img).save(str(path / f"{k}_amp_gt_1.png"))
+    array_to_img(img_amplitude).save(str(path / "log10_amp_p_1.png"))
+
+    def buf_to_file(buf, filename):
+        with open(filename, 'wb') as f:
+            f.write(buf.getbuffer())
+
+    for k, img in images_pdf.items():
+        buf_to_file(img, str(path / f"{k}.pdf"))
+    for k, img in images1_pdf.items():
+        buf_to_file(img, str(path / f"{k}_amp_gt_1.pdf"))
+    buf_to_file(img_amplitude_pdf, str(path / "log10_amp_p_1.pdf"))
+
+    if gen_sample_name is not None:
+        with open(str(path / gen_sample_name), 'w') as f:
+            for event_X, event_Y in zip(*gen_dataset):
+                f.write('params: {:.3f} {:.3f} {:.3f} {:.3f}\n'.format(*event_X))
+                for ipad, time_distr in enumerate(event_Y, model.pad_range[0] + event_X[3].astype(int)):
+                    for itime, amp in enumerate(time_distr, model.time_range[0] + event_X[2].astype(int)):
+                        if amp < 1:
+                            continue
+                        f.write(" {:2d} {:3d} {:8.3e} ".format(ipad, itime, amp))
+                f.write('\n')
+
+    with open(str(path / 'stats'), 'w') as f:
+        f.write(f"{chi2:.2f}\n")
 
 
-def make_trend(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8)):
-    feature_real = feature_real.squeeze()
-    feature_gen = feature_gen.squeeze()
-    real = real.squeeze()
-    gen = gen.squeeze()
+def plot_individual_images(real, gen, n=10, pdffile=None):
+    assert real.ndim == 3 == gen.ndim
+    assert real.shape[1:] == gen.shape[1:]
+    N_max = min(len(real), len(gen))
+    assert n * 2 <= N_max
 
-    bins = np.linspace(
-        min(feature_real.min(), feature_gen.min()),
-        max(feature_real.max(), feature_gen.max()),
-        100
-    )
+    idx = np.sort(np.random.choice(N_max, n * 2, replace=False))
+    real = real[idx]
+    gen = gen[idx]
 
-    fig = plt.figure(figsize=figsize)
-    calc_trend(feature_real, real, bins=bins, label='real', color='blue')
-    calc_trend(feature_gen, gen, bins=bins, label='generated', color='red')
-    plt.legend()
-    plt.title(name)
+    size_x = 12
+    size_y = size_x / real.shape[2] * real.shape[1] * n * 1.2 / 4
+
+    fig, axx = plt.subplots(n, 4, figsize=(size_x, size_y))
+    axx = [(ax[0], ax[1]) for ax in axx] + \
+          [(ax[2], ax[3]) for ax in axx]
+
+    for ax, img_real, img_fake in zip(axx, real, gen):
+        ax[0].imshow(img_real, aspect='auto')
+        ax[0].set_title("real")
+        ax[0].axis('off')
+        ax[1].imshow(img_fake, aspect='auto')
+        ax[1].set_title('generated')
+        ax[1].axis('off')
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
+    if pdffile is not None: fig.savefig(pdffile, format='pdf')
     plt.close(fig)
     buf.seek(0)
-    
+
     img = PIL.Image.open(buf)
-    img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[0], img.size[1], -1)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
-    if calc_chi2:
-        bins = np.linspace(
-            min(feature_real.min(), feature_gen.min()),
-            max(feature_real.max(), feature_gen.max()),
-            20
-        )
-        (
-            (real_mean, real_std),
-            (real_mean_err, real_std_err)
-        ) = calc_trend(feature_real, real, do_plot=False, bins=bins, window_size=1)
-        (
-            (gen_mean, gen_std),
-            (gen_mean_err, gen_std_err)
-        ) = calc_trend(feature_gen, gen, do_plot=False, bins=bins, window_size=1)
 
-        gen_upper = gen_mean + gen_std
-        gen_lower = gen_mean - gen_std
-        gen_err2 = gen_mean_err**2 + gen_std_err**2
+def plot_images_mask(real, gen, pdffile=None):
+    assert real.ndim == 3 == gen.ndim
+    assert real.shape[1:] == gen.shape[1:]
 
-        real_upper = real_mean + real_std
-        real_lower = real_mean - real_std
-        real_err2 = real_mean_err**2 + real_std_err**2
+    size_x = 6
+    size_y = size_x / real.shape[2] * real.shape[1] * 2.4
 
-        chi2 = (
-            ((gen_upper - real_upper)**2 / (gen_err2 + real_err2)).sum() +
-            ((gen_lower - real_lower)**2 / (gen_err2 + real_err2)).sum()
-        )
+    fig, [ax0, ax1] = plt.subplots(2, 1, figsize=(size_x, size_y))
+    ax0.imshow((real >= 1.).any(axis=0), aspect='auto')
+    ax0.set_title("real")
+    ax1.imshow((gen >= 1.).any(axis=0), aspect='auto')
+    ax1.set_title("generated")
 
-        return img_data, chi2
-    
-    return img_data
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    if pdffile is not None: fig.savefig(pdffile, format='pdf')
+    plt.close(fig)
+    buf.seek(0)
+
+    img = PIL.Image.open(buf)
+    return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)

@@ -3,19 +3,25 @@ from pathlib import Path
 
 import tensorflow as tf
 
+from cuda_gpu_config import setup_gpu
 from model_export import dump_graph
-from models.baseline_v4_8x16 import preprocess_features
+from models.model_v4 import preprocess_features, Model_v4
+from models.utils import load_weights
+from run_model_v4 import load_config
 
 def main():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
     parser.add_argument('--checkpoint_name', type=str, required=True)
     parser.add_argument('--output_path', type=str, default='model_export/model_v4/graph.pbtxt')
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
-    parser.add_argument('--dont_hack_upsampling_op', default=False, action='store_true')
+    parser.add_argument('--dont_hack_upsampling_op', default=True, action='store_true')
     parser.add_argument('--test_input', type=float, nargs=4, default=None)
     parser.add_argument('--constant_seed', type=float, default=None)
+    parser.add_argument('--gpu_num', type=str, default=None)
 
     args, _ = parser.parse_known_args()
+
+    setup_gpu(args.gpu_num)
 
     print("")
     print("----" * 10)
@@ -30,13 +36,10 @@ def main():
         return int(epoch)
 
     model_path = Path('saved_models') / args.checkpoint_name
-    gen_checkpoints = model_path.glob("generator_*.h5")
-    latest_gen_checkpoint = max(
-        gen_checkpoints,
-        key=lambda path: epoch_from_name(path.stem)
-    )
 
-    model = tf.keras.models.load_model(str(latest_gen_checkpoint), compile=False)
+    full_model = Model_v4(load_config(model_path / 'config.yaml'))
+    load_weights(full_model, model_path)
+    model = full_model.generator
 
     if args.constant_seed is None:
         def preprocess(x):
