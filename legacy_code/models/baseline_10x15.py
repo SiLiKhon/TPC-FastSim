@@ -1,54 +1,47 @@
 import tensorflow as tf
+
 LATENT_DIM = 32
 activation = tf.keras.activations.elu
 dropout_rate = 0.2
 
 NUM_DISC_UPDATES = 2
-GP_LAMBDA = 10.
+GP_LAMBDA = 10.0
 
-generator = tf.keras.Sequential([
-    tf.keras.layers.Dense(units=64, activation=activation, input_shape=(LATENT_DIM,)),
+generator = tf.keras.Sequential(
+    [
+        tf.keras.layers.Dense(units=64, activation=activation, input_shape=(LATENT_DIM,)),
+        tf.keras.layers.Dense(units=480, activation=activation, input_shape=(LATENT_DIM,)),
+        tf.keras.layers.Reshape((3, 4, 40)),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
+        tf.keras.layers.UpSampling2D(),  # 6x8
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
+        tf.keras.layers.UpSampling2D(),  # 12x16
+        tf.keras.layers.Conv2D(filters=8, kernel_size=3, padding='same', activation=activation),
+        tf.keras.layers.Conv2D(filters=4, kernel_size=(3, 2), padding='valid', activation=activation),
+        tf.keras.layers.Conv2D(filters=1, kernel_size=1, padding='valid', activation=activation),
+        tf.keras.layers.Reshape((10, 15)),
+    ],
+    name='generator',
+)
 
-    tf.keras.layers.Dense(units=480, activation=activation, input_shape=(LATENT_DIM,)),
-    tf.keras.layers.Reshape((3, 4, 40)),
-
-    tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.UpSampling2D(),  # 6x8
-
-    tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.UpSampling2D(),  # 12x16
-
-    tf.keras.layers.Conv2D(filters=8, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.Conv2D(filters=4, kernel_size=(3, 2), padding='valid', activation=activation),
-
-    tf.keras.layers.Conv2D(filters=1, kernel_size=1, padding='valid', activation=activation),
-
-    tf.keras.layers.Reshape((10, 15)),
-], name='generator')
-
-discriminator = tf.keras.Sequential([
-    tf.keras.layers.Reshape((10, 15, 1), input_shape=(10, 15)),
-
-    tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.Dropout(dropout_rate),
-
-    tf.keras.layers.MaxPool2D(padding='same'),  # 5x8
-
-    tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.Dropout(dropout_rate),
-
-    tf.keras.layers.MaxPool2D(padding='same'),  # 3x4
-
-    tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='valid', activation=activation),  # 1x2
-    tf.keras.layers.Dropout(dropout_rate),
-
-    tf.keras.layers.Reshape((128,)),
-
-    tf.keras.layers.Dense(units=128, activation=activation),
-    tf.keras.layers.Dropout(dropout_rate),
-
-    tf.keras.layers.Dense(units=1, activation=activation),
-], name='discriminator')
+discriminator = tf.keras.Sequential(
+    [
+        tf.keras.layers.Reshape((10, 15, 1), input_shape=(10, 15)),
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.MaxPool2D(padding='same'),  # 5x8
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.MaxPool2D(padding='same'),  # 3x4
+        tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='valid', activation=activation),  # 1x2
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Reshape((128,)),
+        tf.keras.layers.Dense(units=128, activation=activation),
+        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Dense(units=1, activation=activation),
+    ],
+    name='discriminator',
+)
 
 
 disc_opt = tf.optimizers.RMSprop()
@@ -56,9 +49,7 @@ gen_opt = tf.optimizers.RMSprop()
 
 
 def make_fake(size):
-    return generator(
-        tf.random.normal(shape=(size, LATENT_DIM), dtype='float32')
-    )
+    return generator(tf.random.normal(shape=(size, LATENT_DIM), dtype='float32'))
 
 
 def disc_loss(d_real, d_fake):
@@ -76,7 +67,7 @@ def gradient_penalty(real, fake):
         t.watch(interpolates)
         d_int = discriminator(interpolates)
     grads = tf.reshape(t.gradient(d_int, interpolates), [len(real), -1])
-    return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0)**2)
+    return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0) ** 2)
 
 
 @tf.function

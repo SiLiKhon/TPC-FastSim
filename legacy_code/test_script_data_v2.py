@@ -27,8 +27,8 @@ def main():
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
     parser.add_argument('--gpu_num', type=str, required=False)
     parser.add_argument('--kernel_init', type=str, default='glorot_uniform', required=False)
-    parser.add_argument('--gp_lambda', type=float, default=10., required=False)
-    parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
+    parser.add_argument('--gp_lambda', type=float, default=10.0, required=False)
+    parser.add_argument('--gpdata_lambda', type=float, default=0.0, required=False)
     parser.add_argument('--angles_to_radians', action='store_true')
     parser.add_argument('--num_additional_disc_layers', type=int, default=0, required=False)
     parser.add_argument('--cramer_gan', action='store_true', default=False)
@@ -41,9 +41,8 @@ def main():
 
     args = parser.parse_args()
 
-    assert (
-        (args.feature_noise_power is None) ==
-        (args.feature_noise_decay is None)
+    assert (args.feature_noise_power is None) == (
+        args.feature_noise_decay is None
     ), 'Noise power and decay must be both provided'
 
     print("")
@@ -82,32 +81,33 @@ def main():
                         f.write('\n')
                     f.write(f_in.read())
 
-    model = BaselineModel10x10(kernel_init=args.kernel_init, lr=args.lr,
-                               num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim,
-                               gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda,
-                               num_additional_layers=args.num_additional_disc_layers,
-                               cramer=args.cramer_gan, features_to_tail=args.features_to_tail,
-                               dropout_rate=args.dropout_rate,
-                               stochastic_stepping=args.stochastic_stepping)
+    model = BaselineModel10x10(
+        kernel_init=args.kernel_init,
+        lr=args.lr,
+        num_disc_updates=args.num_disc_updates,
+        latent_dim=args.latent_dim,
+        gp_lambda=args.gp_lambda,
+        gpdata_lambda=args.gpdata_lambda,
+        num_additional_layers=args.num_additional_disc_layers,
+        cramer=args.cramer_gan,
+        features_to_tail=args.features_to_tail,
+        dropout_rate=args.dropout_rate,
+        stochastic_stepping=args.stochastic_stepping,
+    )
 
     if args.prediction_only:
+
         def epoch_from_name(name):
-            epoch, = re.findall(r'\d+', name)
+            (epoch,) = re.findall(r'\d+', name)
             return int(epoch)
 
         gen_checkpoints = model_path.glob("generator_*.h5")
         disc_checkpoints = model_path.glob("discriminator_*.h5")
-        latest_gen_checkpoint = max(
-            gen_checkpoints,
-            key=lambda path: epoch_from_name(path.stem)
-        )
-        latest_disc_checkpoint = max(
-            disc_checkpoints,
-            key=lambda path: epoch_from_name(path.stem)
-        )
+        latest_gen_checkpoint = max(gen_checkpoints, key=lambda path: epoch_from_name(path.stem))
+        latest_disc_checkpoint = max(disc_checkpoints, key=lambda path: epoch_from_name(path.stem))
 
-        assert (
-            epoch_from_name(latest_gen_checkpoint.stem) == epoch_from_name(latest_disc_checkpoint.stem)
+        assert epoch_from_name(latest_gen_checkpoint.stem) == epoch_from_name(
+            latest_disc_checkpoint.stem
         ), "Latest disc and gen epochs differ"
 
         print(f'Loading generator weights from {str(latest_gen_checkpoint)}')
@@ -145,18 +145,18 @@ def main():
         if gen_more is None:
             gen_features = X
         else:
-            gen_features = np.tile(
-                X,
-                [gen_more] + [1] * (X.ndim - 1)
-            )
-        gen_scaled = np.concatenate([
-            model.make_fake(gen_features[i:i+batch_size]).numpy()
-            for i in range(0, len(gen_features), batch_size)
-        ], axis=0)
+            gen_features = np.tile(X, [gen_more] + [1] * (X.ndim - 1))
+        gen_scaled = np.concatenate(
+            [
+                model.make_fake(gen_features[i : i + batch_size]).numpy()
+                for i in range(0, len(gen_features), batch_size)
+            ],
+            axis=0,
+        )
         real = unscale(Y)
         gen = unscale(gen_scaled)
         gen[gen < 0] = 0
-        gen1 = np.where(gen < 1., 0, gen)
+        gen1 = np.where(gen < 1.0, 0, gen)
         images = make_metric_plots(real, gen, features={'angle': (X, gen_features)}, calc_chi2=calc_chi2)
         if calc_chi2:
             images, chi2 = images
@@ -206,15 +206,11 @@ def main():
         for part in ['train', 'test']:
             path = prediction_path / part
             path.mkdir()
-            (
-                images, images1, img_amplitude,
-                gen_dataset, chi2
-            ) = get_images(
-                calc_chi2=True, return_raw_data=True, gen_more=10,
-                sample=(
-                    (X_train, Y_train) if part == 'train'
-                    else (X_test, Y_test)
-                )
+            (images, images1, img_amplitude, gen_dataset, chi2) = get_images(
+                calc_chi2=True,
+                return_raw_data=True,
+                gen_more=10,
+                sample=((X_train, Y_train) if part == 'train' else (X_test, Y_test)),
             )
             for k, img in images.items():
                 array_to_img(img).save(str(path / f"{k}.png"))
@@ -238,17 +234,28 @@ def main():
     else:
         features_noise = None
         if args.feature_noise_power is not None:
+
             def features_noise(epoch):
-                current_power = args.feature_noise_power / (10**(epoch / args.feature_noise_decay))
+                current_power = args.feature_noise_power / (10 ** (epoch / args.feature_noise_decay))
                 with writer_train.as_default():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
                 return current_power
 
-        train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
-              train_writer=writer_train, val_writer=writer_val,
-              callbacks=[write_hist_summary, save_model, schedule_lr],
-              features_train=X_train, features_val=X_test, features_noise=features_noise)
+        train(
+            Y_train,
+            Y_test,
+            model.training_step,
+            model.calculate_losses,
+            args.num_epochs,
+            args.batch_size,
+            train_writer=writer_train,
+            val_writer=writer_val,
+            callbacks=[write_hist_summary, save_model, schedule_lr],
+            features_train=X_train,
+            features_val=X_test,
+            features_noise=features_noise,
+        )
 
 
 if __name__ == '__main__':

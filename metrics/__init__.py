@@ -62,14 +62,12 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
                         pdffile = io.BytesIO()
                         pdf_plots[name] = pdffile
                     if calc_chi2 and (metric_name != "Sum"):
-                        plots[name], chi2_i = make_trend_plot(feature_real, real,
-                                                              feature_gen, gen,
-                                                              name, calc_chi2=True,
-                                                              pdffile=pdffile)
+                        plots[name], chi2_i = make_trend_plot(
+                            feature_real, real, feature_gen, gen, name, calc_chi2=True, pdffile=pdffile
+                        )
                         chi2 += chi2_i
                     else:
-                        plots[name] = make_trend_plot(feature_real, real,
-                                                      feature_gen, gen, name, pdffile=pdffile)
+                        plots[name] = make_trend_plot(feature_real, real, feature_gen, gen, name, pdffile=pdffile)
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
@@ -83,17 +81,13 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
     return result
 
 
-def make_images_for_model(model,
-                          sample,
-                          return_raw_data=False,
-                          calc_chi2=False,
-                          gen_more=None,
-                          batch_size=128,
-                          pdf_outputs=None):
+def make_images_for_model(
+    model, sample, return_raw_data=False, calc_chi2=False, gen_more=None, batch_size=128, pdf_outputs=None
+):
     X, Y = sample
     assert X.ndim == 2
     assert X.shape[1] == 4
-    make_pdfs = (pdf_outputs is not None)
+    make_pdfs = pdf_outputs is not None
     if make_pdfs:
         assert isinstance(pdf_outputs, list)
         assert len(pdf_outputs) == 0
@@ -101,29 +95,25 @@ def make_images_for_model(model,
     if gen_more is None:
         gen_features = X
     else:
-        gen_features = np.tile(
-            X,
-            [gen_more] + [1] * (X.ndim - 1)
-        )
-    gen_scaled = np.concatenate([
-        model.make_fake(gen_features[i:i+batch_size]).numpy()
-        for i in range(0, len(gen_features), batch_size)
-    ], axis=0)
+        gen_features = np.tile(X, [gen_more] + [1] * (X.ndim - 1))
+    gen_scaled = np.concatenate(
+        [model.make_fake(gen_features[i : i + batch_size]).numpy() for i in range(0, len(gen_features), batch_size)],
+        axis=0,
+    )
     real = model.scaler.unscale(Y)
     gen = model.scaler.unscale(gen_scaled)
     gen[gen < 0] = 0
-    gen1 = np.where(gen < 1., 0, gen)
+    gen1 = np.where(gen < 1.0, 0, gen)
 
     features = {
         'crossing_angle': (X[:, 0], gen_features[:, 0]),
         'dip_angle': (X[:, 1], gen_features[:, 1]),
         'drift_length': (X[:, 2], gen_features[:, 2]),
         'time_bin_fraction': (X[:, 2] % 1, gen_features[:, 2] % 1),
-        'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1)
+        'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1),
     }
 
-    metric_plot_results = make_metric_plots(real, gen, features=features,
-                                            calc_chi2=calc_chi2, make_pdfs=make_pdfs)
+    metric_plot_results = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2, make_pdfs=make_pdfs)
     images = metric_plot_results['plots']
     if calc_chi2:
         chi2 = metric_plot_results['chi2']
@@ -140,8 +130,9 @@ def make_images_for_model(model,
     if make_pdfs:
         pdffile = io.BytesIO()
         pdf_outputs.append(pdffile)
-    img_amplitude = make_histograms(Y.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True,
-                                    pdffile=pdffile)
+    img_amplitude = make_histograms(
+        Y.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True, pdffile=pdffile
+    )
 
     pdffile_examples = None
     pdffile_examples_mask = None
@@ -170,11 +161,9 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
 
     path.mkdir()
     pdf_outputs = []
-    (
-        images, images1, img_amplitude,
-        gen_dataset, chi2
-    ) = make_images_for_model(model, sample=sample,
-                              calc_chi2=True, return_raw_data=True, gen_more=10, pdf_outputs=pdf_outputs)
+    (images, images1, img_amplitude, gen_dataset, chi2) = make_images_for_model(
+        model, sample=sample, calc_chi2=True, return_raw_data=True, gen_more=10, pdf_outputs=pdf_outputs
+    )
     images_pdf, images1_pdf, img_amplitude_pdf = pdf_outputs
 
     for k, img in images.items():
@@ -222,8 +211,7 @@ def plot_individual_images(real, gen, n=10, pdffile=None):
     size_y = size_x / real.shape[2] * real.shape[1] * n * 1.2 / 4
 
     fig, axx = plt.subplots(n, 4, figsize=(size_x, size_y))
-    axx = [(ax[0], ax[1]) for ax in axx] + \
-          [(ax[2], ax[3]) for ax in axx]
+    axx = [(ax[0], ax[1]) for ax in axx] + [(ax[2], ax[3]) for ax in axx]
 
     for ax, img_real, img_fake in zip(axx, real, gen):
         ax[0].imshow(img_real, aspect='auto')
@@ -252,9 +240,9 @@ def plot_images_mask(real, gen, pdffile=None):
     size_y = size_x / real.shape[2] * real.shape[1] * 2.4
 
     fig, [ax0, ax1] = plt.subplots(2, 1, figsize=(size_x, size_y))
-    ax0.imshow((real >= 1.).any(axis=0), aspect='auto')
+    ax0.imshow((real >= 1.0).any(axis=0), aspect='auto')
     ax0.set_title("real")
-    ax1.imshow((gen >= 1.).any(axis=0), aspect='auto')
+    ax1.imshow((gen >= 1.0).any(axis=0), aspect='auto')
     ax1.set_title("generated")
 
     buf = io.BytesIO()

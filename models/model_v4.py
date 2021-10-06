@@ -14,9 +14,7 @@ def preprocess_features(features):
     #   drift_length [35, 290]
     #   pad_coordinate [40-something, 40-something]
     bin_fractions = features[:, -2:] % 1
-    features = (
-        features[:, :3] - tf.constant([[0., 0., 162.5]])
-    ) / tf.constant([[20., 60., 127.5]])
+    features = (features[:, :3] - tf.constant([[0.0, 0.0, 162.5]])) / tf.constant([[20.0, 60.0, 127.5]])
     return tf.concat([features, bin_fractions], axis=-1)
 
 
@@ -33,10 +31,10 @@ def gen_loss(d_real, d_fake):
 
 def disc_loss_cramer(d_real, d_fake, d_fake_2):
     return -tf.reduce_mean(
-        tf.norm(d_real - d_fake, axis=-1) +
-        tf.norm(d_fake_2, axis=-1) -
-        tf.norm(d_fake - d_fake_2, axis=-1) -
-        tf.norm(d_real, axis=-1)
+        tf.norm(d_real - d_fake, axis=-1)
+        + tf.norm(d_fake_2, axis=-1)
+        - tf.norm(d_fake - d_fake_2, axis=-1)
+        - tf.norm(d_real, axis=-1)
     )
 
 
@@ -49,17 +47,11 @@ def logloss(x):
 
 
 def disc_loss_js(d_real, d_fake):
-    return tf.reduce_sum(
-        logloss(d_real)
-    ) + tf.reduce_sum(
-        logloss(-d_fake)
-    ) / (len(d_real) + len(d_fake))
+    return tf.reduce_sum(logloss(d_real)) + tf.reduce_sum(logloss(-d_fake)) / (len(d_real) + len(d_fake))
 
 
 def gen_loss_js(d_real, d_fake):
-    return tf.reduce_mean(
-        logloss(d_fake)
-    )
+    return tf.reduce_mean(logloss(d_fake))
 
 
 class Model_v4:
@@ -82,10 +74,12 @@ class Model_v4:
         self.latent_dim = config['latent_dim']
 
         architecture_descr = config['architecture']
-        self.generator = nn.build_architecture(architecture_descr['generator'],
-                                               custom_objects_code=config.get('custom_objects', None))
-        self.discriminator = nn.build_architecture(architecture_descr['discriminator'],
-                                                   custom_objects_code=config.get('custom_objects', None))
+        self.generator = nn.build_architecture(
+            architecture_descr['generator'], custom_objects_code=config.get('custom_objects', None)
+        )
+        self.discriminator = nn.build_architecture(
+            architecture_descr['discriminator'], custom_objects_code=config.get('custom_objects', None)
+        )
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)
 
@@ -126,28 +120,24 @@ class Model_v4:
 
         if 'optimizer_weights' in model_file:
             print('Also recovering the optimizer state')
-            opt_weight_values = hdf5_format.load_optimizer_weights_from_hdf5_group(
-                model_file
-            )
+            opt_weight_values = hdf5_format.load_optimizer_weights_from_hdf5_group(model_file)
             network.optimizer.set_weights(opt_weight_values)
 
     @tf.function
     def make_fake(self, features):
         size = tf.shape(features)[0]
         latent_input = tf.random.normal(shape=(size, self.latent_dim), dtype='float32')
-        return self.generator(
-            tf.concat([_f(features), latent_input], axis=-1)
-        )
+        return self.generator(tf.concat([_f(features), latent_input], axis=-1))
 
     def gradient_penalty(self, features, real, fake):
-        alpha = tf.random.uniform(shape=[len(real), ] + [1] * (len(real.shape) - 1))
+        alpha = tf.random.uniform(shape=[len(real)] + [1] * (len(real.shape) - 1))
         interpolates = alpha * real + (1 - alpha) * fake
         with tf.GradientTape() as t:
             t.watch(interpolates)
             d_int = self.discriminator([_f(features), interpolates])
 
         grads = tf.reshape(t.gradient(d_int, interpolates), [len(real), -1])
-        return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0)**2)
+        return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0) ** 2)
 
     def gradient_penalty_on_data(self, features, real):
         with tf.GradientTape() as t:
@@ -155,7 +145,7 @@ class Model_v4:
             d_real = self.discriminator([_f(features), real])
 
         grads = tf.reshape(t.gradient(d_real, real), [len(real), -1])
-        return tf.reduce_mean(tf.reduce_sum(grads**2, axis=-1))
+        return tf.reduce_mean(tf.reduce_sum(grads ** 2, axis=-1))
 
     @tf.function
     def calculate_losses(self, feature_batch, target_batch):
@@ -175,19 +165,9 @@ class Model_v4:
             d_loss = disc_loss_cramer(d_real, d_fake, d_fake_2)
 
         if self.gp_lambda > 0:
-            d_loss = (
-                d_loss +
-                self.gradient_penalty(
-                    feature_batch, target_batch, fake
-                ) * self.gp_lambda
-            )
+            d_loss = d_loss + self.gradient_penalty(feature_batch, target_batch, fake) * self.gp_lambda
         if self.gpdata_lambda > 0:
-            d_loss = (
-                d_loss +
-                self.gradient_penalty_on_data(
-                    feature_batch, target_batch
-                ) * self.gpdata_lambda
-            )
+            d_loss = d_loss + self.gradient_penalty_on_data(feature_batch, target_batch) * self.gpdata_lambda
         if not self.cramer:
             if self.js:
                 g_loss = gen_loss_js(d_real, d_fake)
@@ -223,10 +203,7 @@ class Model_v4:
     @tf.function
     def training_step(self, feature_batch, target_batch):
         if self.stochastic_stepping:
-            if tf.random.uniform(
-                shape=[], dtype='int32',
-                maxval=self.num_disc_updates + 1
-            ) == self.num_disc_updates:
+            if tf.random.uniform(shape=[], dtype='int32', maxval=self.num_disc_updates + 1) == self.num_disc_updates:
                 result = self.gen_step(feature_batch, target_batch)
             else:
                 result = self.disc_step(feature_batch, target_batch)

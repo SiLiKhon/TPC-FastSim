@@ -36,7 +36,7 @@ def write_hist_summary(step):
         real = unscale(X_test)
         gen = unscale(gen_scaled)
         gen[gen < 0] = 0
-        gen30 = np.where(gen < 30., 0, gen)
+        gen30 = np.where(gen < 30.0, 0, gen)
         images = make_metric_plots(real, gen)
         images30 = make_metric_plots(real, gen30)
 
@@ -56,18 +56,26 @@ model_path.mkdir(parents=True)
 
 def save_model(step):
     if step % 50 == 0:
-        baseline_10x15.generator    .save(str(model_path.joinpath("generator_{:05d}.h5"    .format(step))))
+        baseline_10x15.generator.save(str(model_path.joinpath("generator_{:05d}.h5".format(step))))
         baseline_10x15.discriminator.save(str(model_path.joinpath("discriminator_{:05d}.h5".format(step))))
 
 
 def schedule_lr(step):
     baseline_10x15.disc_opt.lr.assign(baseline_10x15.disc_opt.lr * 0.998)
-    baseline_10x15.gen_opt .lr.assign(baseline_10x15.gen_opt .lr * 0.998)
+    baseline_10x15.gen_opt.lr.assign(baseline_10x15.gen_opt.lr * 0.998)
     with writer_val.as_default():
         tf.summary.scalar("discriminator learning rate", baseline_10x15.disc_opt.lr, step)
         tf.summary.scalar("generator learning rate", baseline_10x15.gen_opt.lr, step)
 
 
-training.train(X_train, X_test, baseline_10x15.training_step, baseline_10x15.calculate_losses, 10000, 32,
-               train_writer=writer_train, val_writer=writer_val,
-               callbacks=[write_hist_summary, save_model, schedule_lr])
+training.train(
+    X_train,
+    X_test,
+    baseline_10x15.training_step,
+    baseline_10x15.calculate_losses,
+    10000,
+    32,
+    train_writer=writer_train,
+    val_writer=writer_val,
+    callbacks=[write_hist_summary, save_model, schedule_lr],
+)

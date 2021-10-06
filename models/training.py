@@ -3,9 +3,21 @@ import numpy as np
 from tqdm import trange
 
 
-def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_size,
-          train_writer=None, val_writer=None, callbacks=[], features_train=None, features_val=None,
-          features_noise=None, first_epoch=0):
+def train(
+    data_train,
+    data_val,
+    train_step_fn,
+    loss_eval_fn,
+    num_epochs,
+    batch_size,
+    train_writer=None,
+    val_writer=None,
+    callbacks=[],
+    features_train=None,
+    features_val=None,
+    features_noise=None,
+    first_epoch=0,
+):
     if not ((features_train is None) or (features_val is None)):
         assert features_train is not None, 'train: features should be provided for both train and val'
         assert features_val is not None, 'train: features should be provided for both train and val'
@@ -22,15 +34,13 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
             noise_power = features_noise(i_epoch)
 
         for i_sample in trange(0, len(data_train), batch_size):
-            batch = data_train[shuffle_ids][i_sample:i_sample + batch_size]
+            batch = data_train[shuffle_ids][i_sample : i_sample + batch_size]
             if features_train is not None:
-                feature_batch = features_train[shuffle_ids][i_sample:i_sample + batch_size]
+                feature_batch = features_train[shuffle_ids][i_sample : i_sample + batch_size]
                 if noise_power is not None:
                     feature_batch = (
-                        feature_batch +
-                        np.random.normal(
-                            size=feature_batch.shape
-                        ).astype(feature_batch.dtype) * noise_power
+                        feature_batch
+                        + np.random.normal(size=feature_batch.shape).astype(feature_batch.dtype) * noise_power
                     )
 
             if features_train is None:
@@ -45,12 +55,12 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
 
         losses_val = {}
         for i_sample in trange(0, len(data_val), batch_size):
-            batch = data_val[i_sample:i_sample + batch_size]
+            batch = data_val[i_sample : i_sample + batch_size]
 
             if features_train is None:
                 losses_val_batch = {k: l.numpy() for k, l in loss_eval_fn(batch).items()}
             else:
-                feature_batch = features_val[i_sample:i_sample + batch_size]
+                feature_batch = features_val[i_sample : i_sample + batch_size]
                 losses_val_batch = {k: l.numpy() for k, l in loss_eval_fn(feature_batch, batch).items()}
             for k, l in losses_val_batch.items():
                 losses_val[k] = losses_val.get(k, 0) + l * len(batch)

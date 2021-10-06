@@ -12,20 +12,20 @@ def main():
     args = parser.parse_args()
 
     variables = [
-            'crossing_angle',
-            'dip_angle',
-            'drift_length',
-            'pad_coord_fraction',
-            'time_bin_fraction',
+        'crossing_angle',
+        'dip_angle',
+        'drift_length',
+        'pad_coord_fraction',
+        'time_bin_fraction',
     ]
 
     stats = [
-            'Mean0',
-            'Mean1',
-            'Sigma0^2',
-            'Sigma1^2',
-            'Cov01',
-            'Sum',
+        'Mean0',
+        'Mean1',
+        'Sigma0^2',
+        'Sigma1^2',
+        'Cov01',
+        'Sum',
     ]
 
     img_path = Path(args.path_to_images)

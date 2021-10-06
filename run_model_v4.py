@@ -45,9 +45,8 @@ def load_config(file):
     with open(file, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    assert (
-        (config['feature_noise_power'] is None) ==
-        (config['feature_noise_decay'] is None)
+    assert (config['feature_noise_power'] is None) == (
+        config['feature_noise_decay'] is None
     ), 'Noise power and decay must be both provided'
 
     if 'lr_disc' not in config:
@@ -113,44 +112,51 @@ def main():
 
         for part in ['train', 'test']:
             evaluate_model(
-                model, path=prediction_path / part,
-                sample=(
-                    (X_train, Y_train) if part == 'train'
-                    else (X_test, Y_test)
-                ),
-                gen_sample_name=(None if part == 'train' else 'generated.dat')
+                model,
+                path=prediction_path / part,
+                sample=((X_train, Y_train) if part == 'train' else (X_test, Y_test)),
+                gen_sample_name=(None if part == 'train' else 'generated.dat'),
             )
 
     else:
         features_noise = None
         if config['feature_noise_power'] is not None:
+
             def features_noise(epoch):
-                current_power = config['feature_noise_power'] / (10**(epoch / config['feature_noise_decay']))
+                current_power = config['feature_noise_power'] / (10 ** (epoch / config['feature_noise_decay']))
                 with writer_train.as_default():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
                 return current_power
 
-        save_model = SaveModelCallback(
-            model=model, path=model_path, save_period=config['save_every']
-        )
+        save_model = SaveModelCallback(model=model, path=model_path, save_period=config['save_every'])
         write_hist_summary = WriteHistSummaryCallback(
-            model, sample=(X_test, Y_test),
-            save_period=config['save_every'], writer=writer_val
+            model, sample=(X_test, Y_test), save_period=config['save_every'], writer=writer_val
         )
         schedule_lr = ScheduleLRCallback(
-            model, writer=writer_val,
+            model,
+            writer=writer_val,
             func_gen=get_scheduler(config['lr_gen'], config['lr_schedule_rate_gen']),
-            func_disc=get_scheduler(config['lr_disc'], config['lr_schedule_rate_disc'])
+            func_disc=get_scheduler(config['lr_disc'], config['lr_schedule_rate_disc']),
         )
         if continue_training:
             schedule_lr(next_epoch - 1)
 
-        train(Y_train, Y_test, model.training_step, model.calculate_losses, config['num_epochs'],
-              config['batch_size'], train_writer=writer_train, val_writer=writer_val,
-              callbacks=[schedule_lr, save_model, write_hist_summary],
-              features_train=X_train, features_val=X_test, features_noise=features_noise,
-              first_epoch=next_epoch)
+        train(
+            Y_train,
+            Y_test,
+            model.training_step,
+            model.calculate_losses,
+            config['num_epochs'],
+            config['batch_size'],
+            train_writer=writer_train,
+            val_writer=writer_val,
+            callbacks=[schedule_lr, save_model, write_hist_summary],
+            features_train=X_train,
+            features_val=X_test,
+            features_noise=features_noise,
+            first_epoch=next_epoch,
+        )
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import re
 
 
 def epoch_from_name(name):
-    epoch, = re.findall(r'\d+', name)
+    (epoch,) = re.findall(r'\d+', name)
     return int(epoch)
 
 
@@ -16,9 +16,7 @@ def latest_epoch(model_path):
     latest_gen_epoch = max(gen_epochs)
     latest_disc_epoch = max(disc_epochs)
 
-    assert (
-        latest_gen_epoch == latest_disc_epoch
-    ), "Latest disc and gen epochs differ"
+    assert latest_gen_epoch == latest_disc_epoch, "Latest disc and gen epochs differ"
 
     return latest_gen_epoch
 

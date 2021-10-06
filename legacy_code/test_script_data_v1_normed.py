@@ -59,15 +59,23 @@ def save_model(step):
 
 def schedule_lr(step):
     baseline_10x10_normed.disc_opt.lr.assign(baseline_10x10_normed.disc_opt.lr * 0.998)
-    baseline_10x10_normed.gen_opt .lr.assign(baseline_10x10_normed.gen_opt .lr * 0.998)
+    baseline_10x10_normed.gen_opt.lr.assign(baseline_10x10_normed.gen_opt.lr * 0.998)
     with writer_val.as_default():
         tf.summary.scalar("discriminator learning rate", baseline_10x10_normed.disc_opt.lr, step)
-        tf.summary.scalar("generator learning rate", baseline_10x10_normed.gen_opt .lr, step)
+        tf.summary.scalar("generator learning rate", baseline_10x10_normed.gen_opt.lr, step)
 
 
 baseline_10x10_normed.disc_opt.lr.assign(0.0001)
-baseline_10x10_normed.gen_opt .lr.assign(0.0001)
+baseline_10x10_normed.gen_opt.lr.assign(0.0001)
 
-training.train(X_train, X_test, baseline_10x10_normed.training_step, baseline_10x10_normed.calculate_losses, 10000, 32,
-               train_writer=writer_train, val_writer=writer_val,
-               callbacks=[write_hist_summary, save_model, schedule_lr])
+training.train(
+    X_train,
+    X_test,
+    baseline_10x10_normed.training_step,
+    baseline_10x10_normed.calculate_losses,
+    10000,
+    32,
+    train_writer=writer_train,
+    val_writer=writer_val,
+    callbacks=[write_hist_summary, save_model, schedule_lr],
+)

@@ -1,5 +1,6 @@
 [flake8]
 max-line-length = 120
+extend-ignore = E203
 exclude =
     model_export/tf2xla_pb2.py
 per-file-ignores =

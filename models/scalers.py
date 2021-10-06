@@ -26,22 +26,19 @@ class Gaussian:
     def scale(self, x):
         result = gaussian_fit(x)
         result[:, -1] = np.log1p(result[:, -1])
-        result[:, 4] /= (result[:, 2] * result[:, 3])
+        result[:, 4] /= result[:, 2] * result[:, 3]
         return result
 
     def unscale(self, x):
         m0, m1, D00, D11, D01, logA = x.T
         D00 = np.clip(D00, 0.05, None)
         D11 = np.clip(D11, 0.05, None)
-        D01 = np.clip(D01, -1., 1.)
+        D01 = np.clip(D01, -1.0, 1.0)
         D01 *= D00 * D11
 
         A = np.expm1(logA)
 
-        cov = np.stack([
-            np.stack([D00, D01], axis=1),
-            np.stack([D01, D11], axis=1)
-        ], axis=2)  # N x 2 x 2
+        cov = np.stack([np.stack([D00, D01], axis=1), np.stack([D01, D11], axis=1)], axis=2)  # N x 2 x 2
         invcov = np.linalg.inv(cov)
         mu = np.stack([m0, m1], axis=1)
 

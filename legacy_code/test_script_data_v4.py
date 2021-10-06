@@ -27,8 +27,8 @@ def make_parser():
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
     parser.add_argument('--gpu_num', type=str, required=False)
     parser.add_argument('--kernel_init', type=str, default='glorot_uniform', required=False)
-    parser.add_argument('--gp_lambda', type=float, default=10., required=False)
-    parser.add_argument('--gpdata_lambda', type=float, default=0., required=False)
+    parser.add_argument('--gp_lambda', type=float, default=10.0, required=False)
+    parser.add_argument('--gpdata_lambda', type=float, default=0.0, required=False)
     parser.add_argument('--num_additional_disc_layers', type=int, default=0, required=False)
     parser.add_argument('--cramer_gan', action='store_true', default=False)
     parser.add_argument('--features_to_tail', action='store_true', default=True)
@@ -53,9 +53,8 @@ def print_args(args):
 def parse_args():
     args = make_parser().parse_args()
 
-    assert (
-        (args.feature_noise_power is None) ==
-        (args.feature_noise_decay is None)
+    assert (args.feature_noise_power is None) == (
+        args.feature_noise_decay is None
     ), 'Noise power and decay must be both provided'
 
     print_args(args)
@@ -76,24 +75,18 @@ def write_args(model_path, fname='arguments.txt'):
 
 
 def epoch_from_name(name):
-    epoch, = re.findall(r'\d+', name)
+    (epoch,) = re.findall(r'\d+', name)
     return int(epoch)
 
 
 def load_weights(model, model_path):
     gen_checkpoints = model_path.glob("generator_*.h5")
     disc_checkpoints = model_path.glob("discriminator_*.h5")
-    latest_gen_checkpoint = max(
-        gen_checkpoints,
-        key=lambda path: epoch_from_name(path.stem)
-    )
-    latest_disc_checkpoint = max(
-        disc_checkpoints,
-        key=lambda path: epoch_from_name(path.stem)
-    )
+    latest_gen_checkpoint = max(gen_checkpoints, key=lambda path: epoch_from_name(path.stem))
+    latest_disc_checkpoint = max(disc_checkpoints, key=lambda path: epoch_from_name(path.stem))
 
-    assert (
-        epoch_from_name(latest_gen_checkpoint.stem) == epoch_from_name(latest_disc_checkpoint.stem)
+    assert epoch_from_name(latest_gen_checkpoint.stem) == epoch_from_name(
+        latest_disc_checkpoint.stem
     ), "Latest disc and gen epochs differ"
 
     print(f'Loading generator weights from {str(latest_gen_checkpoint)}')
@@ -104,12 +97,7 @@ def load_weights(model, model_path):
     return latest_gen_checkpoint, latest_disc_checkpoint
 
 
-def get_images(model,
-               sample,
-               return_raw_data=False,
-               calc_chi2=False,
-               gen_more=None,
-               batch_size=128):
+def get_images(model, sample, return_raw_data=False, calc_chi2=False, gen_more=None, batch_size=128):
     X, Y = sample
     assert X.ndim == 2
     assert X.shape[1] == 4
@@ -117,25 +105,22 @@ def get_images(model,
     if gen_more is None:
         gen_features = X
     else:
-        gen_features = np.tile(
-            X,
-            [gen_more] + [1] * (X.ndim - 1)
-        )
-    gen_scaled = np.concatenate([
-        model.make_fake(gen_features[i:i+batch_size]).numpy()
-        for i in range(0, len(gen_features), batch_size)
-    ], axis=0)
+        gen_features = np.tile(X, [gen_more] + [1] * (X.ndim - 1))
+    gen_scaled = np.concatenate(
+        [model.make_fake(gen_features[i : i + batch_size]).numpy() for i in range(0, len(gen_features), batch_size)],
+        axis=0,
+    )
     real = model.scaler.unscale(Y)
     gen = model.scaler.unscale(gen_scaled)
     gen[gen < 0] = 0
-    gen1 = np.where(gen < 1., 0, gen)
+    gen1 = np.where(gen < 1.0, 0, gen)
 
     features = {
         'crossing_angle': (X[:, 0], gen_features[:, 0]),
         'dip_angle': (X[:, 1], gen_features[:, 1]),
         'drift_length': (X[:, 2], gen_features[:, 2]),
         'time_bin_fraction': (X[:, 2] % 1, gen_features[:, 2] % 1),
-        'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1)
+        'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1),
     }
 
     images = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2)
@@ -166,10 +151,8 @@ class SaveModelCallback:
     def __call__(self, step):
         if step % self.save_period == 0:
             print(f'Saving model on step {step} to {self.path}')
-            self.model.generator.save(
-                str(self.path.joinpath("generator_{:05d}.h5".format(step))))
-            self.model.discriminator.save(
-                str(self.path.joinpath("discriminator_{:05d}.h5".format(step))))
+            self.model.generator.save(str(self.path.joinpath("generator_{:05d}.h5".format(step))))
+            self.model.discriminator.save(str(self.path.joinpath("discriminator_{:05d}.h5".format(step))))
 
 
 class WriteHistSummaryCallback:
@@ -181,9 +164,7 @@ class WriteHistSummaryCallback:
 
     def __call__(self, step):
         if step % self.save_period == 0:
-            images, images1, img_amplitude, chi2 = get_images(self.model,
-                                                              sample=self.sample,
-                                                              calc_chi2=True)
+            images, images1, img_amplitude, chi2 = get_images(self.model, sample=self.sample, calc_chi2=True)
             with self.writer.as_default():
                 tf.summary.scalar("chi2", chi2, step)
 
@@ -213,11 +194,9 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
         return PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
 
     path.mkdir()
-    (
-        images, images1, img_amplitude,
-        gen_dataset, chi2
-    ) = get_images(model, sample=sample,
-                   calc_chi2=True, return_raw_data=True, gen_more=10)
+    (images, images1, img_amplitude, gen_dataset, chi2) = get_images(
+        model, sample=sample, calc_chi2=True, return_raw_data=True, gen_more=10
+    )
 
     for k, img in images.items():
         array_to_img(img).save(str(path / f"{k}.png"))
@@ -255,13 +234,19 @@ def main():
 
         write_args(model_path)
 
-    model = BaselineModel_8x16(kernel_init=args.kernel_init, lr=args.lr,
-                               num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim,
-                               gp_lambda=args.gp_lambda, gpdata_lambda=args.gpdata_lambda,
-                               num_additional_layers=args.num_additional_disc_layers,
-                               cramer=args.cramer_gan, features_to_tail=args.features_to_tail,
-                               dropout_rate=args.dropout_rate,
-                               stochastic_stepping=args.stochastic_stepping)
+    model = BaselineModel_8x16(
+        kernel_init=args.kernel_init,
+        lr=args.lr,
+        num_disc_updates=args.num_disc_updates,
+        latent_dim=args.latent_dim,
+        gp_lambda=args.gp_lambda,
+        gpdata_lambda=args.gpdata_lambda,
+        num_additional_layers=args.num_additional_disc_layers,
+        cramer=args.cramer_gan,
+        features_to_tail=args.features_to_tail,
+        dropout_rate=args.dropout_rate,
+        stochastic_stepping=args.stochastic_stepping,
+    )
 
     if args.prediction_only:
         latest_gen_checkpoint, latest_disc_checkpoint = load_weights(model, model_path)
@@ -285,38 +270,42 @@ def main():
 
         for part in ['train', 'test']:
             evaluate_model(
-                model, path=prediction_path / part,
-                sample=(
-                    (X_train, Y_train) if part == 'train'
-                    else (X_test, Y_test)
-                ),
-                gen_sample_name=(None if part == 'train' else 'generated.dat')
+                model,
+                path=prediction_path / part,
+                sample=((X_train, Y_train) if part == 'train' else (X_test, Y_test)),
+                gen_sample_name=(None if part == 'train' else 'generated.dat'),
             )
 
     else:
         features_noise = None
         if args.feature_noise_power is not None:
+
             def features_noise(epoch):
-                current_power = args.feature_noise_power / (10**(epoch / args.feature_noise_decay))
+                current_power = args.feature_noise_power / (10 ** (epoch / args.feature_noise_decay))
                 with writer_train.as_default():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
                 return current_power
 
-        save_model = SaveModelCallback(
-            model=model, path=model_path, save_period=args.save_every
-        )
+        save_model = SaveModelCallback(model=model, path=model_path, save_period=args.save_every)
         write_hist_summary = WriteHistSummaryCallback(
-            model, sample=(X_test, Y_test),
-            save_period=args.save_every, writer=writer_val
+            model, sample=(X_test, Y_test), save_period=args.save_every, writer=writer_val
         )
-        schedule_lr = ScheduleLRCallback(
-            model, decay_rate=args.lr_schedule_rate, writer=writer_val
+        schedule_lr = ScheduleLRCallback(model, decay_rate=args.lr_schedule_rate, writer=writer_val)
+        train(
+            Y_train,
+            Y_test,
+            model.training_step,
+            model.calculate_losses,
+            args.num_epochs,
+            args.batch_size,
+            train_writer=writer_train,
+            val_writer=writer_val,
+            callbacks=[write_hist_summary, save_model, schedule_lr],
+            features_train=X_train,
+            features_val=X_test,
+            features_noise=features_noise,
         )
-        train(Y_train, Y_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
-              train_writer=writer_train, val_writer=writer_val,
-              callbacks=[write_hist_summary, save_model, schedule_lr],
-              features_train=X_train, features_val=X_test, features_noise=features_noise)
 
 
 if __name__ == '__main__':
