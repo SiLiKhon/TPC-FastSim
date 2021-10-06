@@ -1,0 +1,9 @@
+name: Flake8 + pytest stylecheck
+on: [push]
+jobs:
+  flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run flake8
+        image: docker/Dockerfile
+
