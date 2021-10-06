@@ -13,10 +13,10 @@ generator = tf.keras.Sequential([
     tf.keras.layers.Reshape((3, 4, 40)),
 
     tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.UpSampling2D(), # 6x8
+    tf.keras.layers.UpSampling2D(),  # 6x8
 
     tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
-    tf.keras.layers.UpSampling2D(), # 12x16
+    tf.keras.layers.UpSampling2D(),  # 12x16
 
     tf.keras.layers.Conv2D(filters=8, kernel_size=3, padding='same', activation=activation),
     tf.keras.layers.Conv2D(filters=4, kernel_size=(3, 2), padding='valid', activation=activation),
@@ -32,14 +32,14 @@ discriminator = tf.keras.Sequential([
     tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation),
     tf.keras.layers.Dropout(dropout_rate),
 
-    tf.keras.layers.MaxPool2D(padding='same'), # 5x8
+    tf.keras.layers.MaxPool2D(padding='same'),  # 5x8
 
     tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation),
     tf.keras.layers.Dropout(dropout_rate),
 
-    tf.keras.layers.MaxPool2D(padding='same'), # 3x4
+    tf.keras.layers.MaxPool2D(padding='same'),  # 3x4
 
-    tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='valid', activation=activation), # 1x2
+    tf.keras.layers.Conv2D(filters=64, kernel_size=3, padding='valid', activation=activation),  # 1x2
     tf.keras.layers.Dropout(dropout_rate),
 
     tf.keras.layers.Reshape((128,)),
@@ -51,20 +51,23 @@ discriminator = tf.keras.Sequential([
 ], name='discriminator')
 
 
-
 disc_opt = tf.optimizers.RMSprop()
 gen_opt = tf.optimizers.RMSprop()
+
 
 def make_fake(size):
     return generator(
         tf.random.normal(shape=(size, LATENT_DIM), dtype='float32')
     )
 
+
 def disc_loss(d_real, d_fake):
     return tf.reduce_mean(d_fake - d_real)
 
+
 def gen_loss(d_real, d_fake):
     return tf.reduce_mean(d_real - d_fake)
+
 
 def gradient_penalty(real, fake):
     alpha = tf.random.uniform(shape=[len(real), 1, 1])
@@ -75,6 +78,7 @@ def gradient_penalty(real, fake):
     grads = tf.reshape(t.gradient(d_int, interpolates), [len(real), -1])
     return tf.reduce_mean(tf.maximum(tf.norm(grads, axis=-1) - 1, 0)**2)
 
+
 @tf.function
 def calculate_losses(batch):
     fake = make_fake(len(batch))
@@ -83,7 +87,8 @@ def calculate_losses(batch):
 
     d_loss = disc_loss(d_real, d_fake) + GP_LAMBDA * gradient_penalty(batch, fake)
     g_loss = gen_loss(d_real, d_fake)
-    return {'disc_loss' : d_loss, 'gen_loss' : g_loss}
+    return {'disc_loss': d_loss, 'gen_loss': g_loss}
+
 
 def disc_step(batch):
     batch = tf.convert_to_tensor(batch)
@@ -95,6 +100,7 @@ def disc_step(batch):
     disc_opt.apply_gradients(zip(grads, discriminator.trainable_variables))
     return losses
 
+
 def gen_step(batch):
     batch = tf.convert_to_tensor(batch)
 
@@ -105,7 +111,9 @@ def gen_step(batch):
     gen_opt.apply_gradients(zip(grads, generator.trainable_variables))
     return losses
 
+
 step_counter = tf.Variable(0, dtype='int32', trainable=False)
+
 
 @tf.function
 def training_step(batch):

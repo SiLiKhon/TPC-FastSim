@@ -1,4 +1,5 @@
-import argparse, re
+import argparse
+import re
 from pathlib import Path
 
 import tensorflow as tf
@@ -8,6 +9,7 @@ from model_export import dump_graph
 from models.model_v4 import preprocess_features, Model_v4
 from models.utils import load_weights
 from run_model_v4 import load_config
+
 
 def main():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
@@ -32,7 +34,7 @@ def main():
     print("")
 
     def epoch_from_name(name):
-        epoch, = re.findall('\d+', name)
+        epoch, = re.findall(r'\d+', name)
         return int(epoch)
 
     model_path = Path('saved_models') / args.checkpoint_name

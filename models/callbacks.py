@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from metrics import make_images_for_model
 
+
 class SaveModelCallback:
     def __init__(self, model, path, save_period):
         self.model = model

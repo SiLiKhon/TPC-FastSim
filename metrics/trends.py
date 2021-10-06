@@ -18,8 +18,8 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
         bins = np.linspace(np.min(x), np.max(x), bins + 1)
     sel = (x >= bins[0])
     x, y = x[sel], y[sel]
-    cats = (x[:,np.newaxis] < bins[np.newaxis,1:]).argmax(axis=1)
-    
+    cats = (x[:, np.newaxis] < bins[np.newaxis, 1:]).argmax(axis=1)
+
     def stats(arr):
         return (
             arr.mean(),
@@ -27,7 +27,7 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
             arr.std(),
             _bootstrap_error(arr, np.std)
         )
-    
+
     mean, mean_err, std, std_err, bin_centers = np.array([
         stats(
             y[(cats >= left) & (cats < right)]
@@ -37,12 +37,11 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
         )
     ]).T
 
-
     if do_plot:
         mean_p_std_err = (mean_err**2 + std_err**2)**0.5
         plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
         kwargs['alpha'] *= 0.5
-        kwargs = {k : v for k, v in kwargs.items() if k != 'label'}
+        kwargs = {k: v for k, v in kwargs.items() if k != 'label'}
         plt.fill_between(bin_centers, mean - std - mean_p_std_err, mean - std + mean_p_std_err, **kwargs)
         plt.fill_between(bin_centers, mean + std - mean_p_std_err, mean + std + mean_p_std_err, **kwargs)
         kwargs['alpha'] *= 0.25
@@ -71,10 +70,11 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')
-    if pdffile is not None: fig.savefig(pdffile, format='pdf')
+    if pdffile is not None:
+        fig.savefig(pdffile, format='pdf')
     plt.close(fig)
     buf.seek(0)
-    
+
     img = PIL.Image.open(buf)
     img_data = np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
@@ -107,5 +107,5 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
         )
 
         return img_data, chi2
-    
+
     return img_data

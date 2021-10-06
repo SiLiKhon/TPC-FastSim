@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 import re
 from pathlib import Path
 import argparse
@@ -38,9 +39,7 @@ def main():
     parser.add_argument('--feature_noise_power', type=float, default=None)
     parser.add_argument('--feature_noise_decay', type=float, default=None)
 
-
     args = parser.parse_args()
-
 
     assert (
         (args.feature_noise_power is None) ==
@@ -51,7 +50,7 @@ def main():
     print("----" * 10)
     print("Arguments:")
     for k, v in vars(args).items():
-        print(f"    {k} : {v}")
+        print(f"    {k}: {v}")
     print("----" * 10)
     print("")
 
@@ -79,7 +78,8 @@ def main():
             f.write('\n'.join(raw_args))
             for fname in fnames:
                 with open(fname, 'r') as f_in:
-                    if len(raw_args) > 0: f.write('\n')
+                    if len(raw_args) > 0:
+                        f.write('\n')
                     f.write(f_in.read())
 
     model = BaselineModel10x10(kernel_init=args.kernel_init, lr=args.lr,
@@ -92,7 +92,7 @@ def main():
 
     if args.prediction_only:
         def epoch_from_name(name):
-            epoch, = re.findall('\d+', name)
+            epoch, = re.findall(r'\d+', name)
             return int(epoch)
 
         gen_checkpoints = model_path.glob("generator_*.h5")
@@ -115,8 +115,6 @@ def main():
         print(f'Loading discriminator weights from {str(latest_disc_checkpoint)}')
         model.discriminator.load_weights(str(latest_disc_checkpoint))
 
-
-
     def save_model(step):
         if step % args.save_every == 0:
             print(f'Saving model on step {step} to {model_path}')
@@ -127,8 +125,8 @@ def main():
     pad_range = (39, 49)
     time_range = (266, 276)
     data, features = preprocessing.read_csv_2d(pad_range=pad_range, time_range=time_range)
-    assert np.isclose(features[:,1].std(), 0), features[:,1].std()
-    features = features[:,:1].astype('float32')
+    assert np.isclose(features[:, 1].std(), 0), features[:, 1].std()
+    features = features[:, :1].astype('float32')
     if args.angles_to_radians:
         features *= np.pi / 180
 
@@ -139,7 +137,8 @@ def main():
         writer_train = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/train')
         writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
-    unscale = lambda x: 10 ** x - 1
+    def unscale(x):
+        return 10 ** x - 1
 
     def get_images(return_raw_data=False, calc_chi2=False, gen_more=None, sample=(X_test, Y_test), batch_size=128):
         X, Y = sample
@@ -158,11 +157,11 @@ def main():
         gen = unscale(gen_scaled)
         gen[gen < 0] = 0
         gen1 = np.where(gen < 1., 0, gen)
-        images = make_metric_plots(real, gen, features={'angle' : (X, gen_features)}, calc_chi2=calc_chi2)
+        images = make_metric_plots(real, gen, features={'angle': (X, gen_features)}, calc_chi2=calc_chi2)
         if calc_chi2:
             images, chi2 = images
 
-        images1 = make_metric_plots(real, gen1, features={'angle' : (X, gen_features)})
+        images1 = make_metric_plots(real, gen1, features={'angle': (X, gen_features)})
 
         img_amplitude = make_histograms(Y_test.flatten(), gen_scaled.flatten(), 'log10(amplitude + 1)', logy=True)
 
@@ -175,7 +174,6 @@ def main():
             result += [chi2]
 
         return result
-
 
     def write_hist_summary(step):
         if step % args.save_every == 0:
@@ -190,7 +188,6 @@ def main():
                     tf.summary.image("{} (amp > 1)".format(k), img, step)
                 tf.summary.image("log10(amplitude + 1)", img_amplitude, step)
 
-
     def schedule_lr(step):
         model.disc_opt.lr.assign(model.disc_opt.lr * args.lr_schedule_rate)
         model.gen_opt.lr.assign(model.gen_opt.lr * args.lr_schedule_rate)
@@ -203,7 +200,8 @@ def main():
         assert not prediction_path.exists(), "Prediction path already exists"
         prediction_path.mkdir()
 
-        array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
+        def array_to_img(arr):
+            return PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
 
         for part in ['train', 'test']:
             path = prediction_path / part
@@ -214,7 +212,7 @@ def main():
             ) = get_images(
                 calc_chi2=True, return_raw_data=True, gen_more=10,
                 sample=(
-                    (X_train, Y_train) if part=='train'
+                    (X_train, Y_train) if part == 'train'
                     else (X_test, Y_test)
                 )
             )

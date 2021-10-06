@@ -8,12 +8,12 @@ def _gaussian_fit(img):
     img_n = img / img.sum()
 
     mu = np.fromfunction(
-        lambda i, j: (img_n[np.newaxis,...] * np.stack([i, j])).sum(axis=(1, 2)),
+        lambda i, j: (img_n[np.newaxis, ...] * np.stack([i, j])).sum(axis=(1, 2)),
         shape=img.shape
     )
     cov = np.fromfunction(
         lambda i, j: (
-            (img_n[np.newaxis,...] * np.stack([i * i, j * i, i * j, j * j])).sum(axis=(1, 2))
+            (img_n[np.newaxis, ...] * np.stack([i * i, j * i, i * j, j * j])).sum(axis=(1, 2))
         ) - np.stack([mu[0]**2, mu[0]*mu[1], mu[0]*mu[1], mu[1]**2]),
         shape=img.shape
     ).reshape(2, 2)
@@ -48,15 +48,15 @@ def get_val_metric_v(imgs):
     assert (imgs > 0).any(axis=(1, 2)).all(), 'get_val_metric_v: some images are empty'
     imgs_n = imgs / imgs.sum(axis=(1, 2), keepdims=True)
     mu = np.fromfunction(
-        lambda i, j: (imgs_n[:,np.newaxis,...] * np.stack([i, j])[np.newaxis,...]).sum(axis=(2, 3)),
+        lambda i, j: (imgs_n[:, np.newaxis, ...] * np.stack([i, j])[np.newaxis, ...]).sum(axis=(2, 3)),
         shape=imgs.shape[1:]
     )
 
     cov = np.fromfunction(
         lambda i, j: (
-            (imgs_n[:,np.newaxis,...] * np.stack([i * i, j * j, i * j])[np.newaxis,...]).sum(axis=(2, 3))
-        ) - np.stack([mu[:,0]**2, mu[:,1]**2, mu[:,0] * mu[:,1]]).T,
+            (imgs_n[:, np.newaxis, ...] * np.stack([i * i, j * j, i * j])[np.newaxis, ...]).sum(axis=(2, 3))
+        ) - np.stack([mu[:, 0]**2, mu[:, 1]**2, mu[:, 0] * mu[:, 1]]).T,
         shape=imgs.shape[1:]
     )
 
-    return np.concatenate([mu, cov, imgs.sum(axis=(1, 2))[:,np.newaxis]], axis=1)
+    return np.concatenate([mu, cov, imgs.sum(axis=(1, 2))[:, np.newaxis]], axis=1)

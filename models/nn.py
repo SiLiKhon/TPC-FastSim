@@ -1,5 +1,4 @@
 import tensorflow as tf
-import numpy as np
 
 
 custom_objects = {}
@@ -148,7 +147,7 @@ def vector_img_connect_block(vector_shape, img_shape, block,
     block_input = input_img
     if len(img_shape) == 2:
         block_input = tf.keras.layers.Reshape(img_shape + (1,))(block_input)
-    if not vector_bypass:        
+    if not vector_bypass:
         reshaped_vec = tf.tile(
             tf.keras.layers.Reshape((1, 1) + vector_shape)(input_vec),
             (1, *img_shape[:2], 1)

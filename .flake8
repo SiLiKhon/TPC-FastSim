@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 120
+exclude =
+    model_export/tf2xla_pb2.py
+per-file-ignores =
+    legacy_code/test_script_data_v0.py:E402
+    legacy_code/test_script_data_v1_normed.py:E402

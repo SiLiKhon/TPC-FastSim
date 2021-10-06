@@ -2,7 +2,7 @@ import re
 
 
 def epoch_from_name(name):
-    epoch, = re.findall('\d+', name)
+    epoch, = re.findall(r'\d+', name)
     return int(epoch)
 
 

@@ -6,7 +6,7 @@ from metrics.gaussian_metrics import get_val_metric_v as gaussian_fit
 class Identity:
     def scale(self, x):
         return x
-    
+
     def unscale(self, x):
         return x
 
@@ -25,8 +25,8 @@ class Gaussian:
 
     def scale(self, x):
         result = gaussian_fit(x)
-        result[:,-1] = np.log1p(result[:,-1])
-        result[:,4] /= (result[:,2] * result[:,3])
+        result[:, -1] = np.log1p(result[:, -1])
+        result[:, 4] /= (result[:, 2] * result[:, 3])
         return result
 
     def unscale(self, x):
@@ -41,7 +41,7 @@ class Gaussian:
         cov = np.stack([
             np.stack([D00, D01], axis=1),
             np.stack([D01, D11], axis=1)
-        ], axis=2) # N x 2 x 2
+        ], axis=2)  # N x 2 x 2
         invcov = np.linalg.inv(cov)
         mu = np.stack([m0, m1], axis=1)
 
@@ -49,14 +49,12 @@ class Gaussian:
         xx1 = np.arange(self.shape[1])
         xx0, xx1 = np.meshgrid(xx0, xx1, indexing='ij')
         xx = np.stack([xx0, xx1], axis=2)
-        residuals = xx[None,...] - mu[:,None,None,:] # N x H x W x 2
+        residuals = xx[None, ...] - mu[:, None, None, :]  # N x H x W x 2
 
-        result = np.exp(-0.5 *
-            np.einsum('ijkl,ilm,ijkm->ijk', residuals, invcov, residuals)
-        )
+        result = np.exp(-0.5 * np.einsum('ijkl,ilm,ijkm->ijk', residuals, invcov, residuals))
 
         result /= result.sum(axis=(1, 2), keepdims=True)
-        result *= A[:,None,None]
+        result *= A[:, None, None]
 
         return result
 

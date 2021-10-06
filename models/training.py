@@ -14,7 +14,6 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
         print("Working on epoch #{}".format(i_epoch), flush=True)
 
         tf.keras.backend.set_learning_phase(1)  # training
-        
         shuffle_ids = np.random.permutation(len(data_train))
         losses_train = {}
 
@@ -40,7 +39,7 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
                 losses_train_batch = train_step_fn(feature_batch, batch)
             for k, l in losses_train_batch.items():
                 losses_train[k] = losses_train.get(k, 0) + l.numpy() * len(batch)
-        losses_train = {k : l / len(data_train) for k, l in losses_train.items()}
+        losses_train = {k: l / len(data_train) for k, l in losses_train.items()}
 
         tf.keras.backend.set_learning_phase(0)  # testing
 
@@ -49,13 +48,13 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
             batch = data_val[i_sample:i_sample + batch_size]
 
             if features_train is None:
-                losses_val_batch = {k : l.numpy() for k, l in loss_eval_fn(batch).items()}
+                losses_val_batch = {k: l.numpy() for k, l in loss_eval_fn(batch).items()}
             else:
                 feature_batch = features_val[i_sample:i_sample + batch_size]
-                losses_val_batch = {k : l.numpy() for k, l in loss_eval_fn(feature_batch, batch).items()}
+                losses_val_batch = {k: l.numpy() for k, l in loss_eval_fn(feature_batch, batch).items()}
             for k, l in losses_val_batch.items():
                 losses_val[k] = losses_val.get(k, 0) + l * len(batch)
-        losses_val = {k : l / len(data_val) for k, l in losses_val.items()}
+        losses_val = {k: l / len(data_val) for k, l in losses_val.items()}
 
         for f in callbacks:
             f(i_epoch)
@@ -64,7 +63,7 @@ def train(data_train, data_val, train_step_fn, loss_eval_fn, num_epochs, batch_s
             with train_writer.as_default():
                 for k, l in losses_train.items():
                     tf.summary.scalar(k, l, i_epoch)
-        
+
         if val_writer is not None:
             with val_writer.as_default():
                 for k, l in losses_val.items():

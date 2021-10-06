@@ -7,16 +7,22 @@ def get_generator(activation, kernel_init, latent_dim):
 
         tf.keras.layers.Reshape((4, 4, 4)),
 
-        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
-        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
         tf.keras.layers.UpSampling2D(),  # 8x8
 
-        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same' , activation=activation, kernel_initializer=kernel_init),
-        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='valid', activation=activation, kernel_initializer=kernel_init),  # 6x6
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='valid', activation=activation,
+                               kernel_initializer=kernel_init),  # 6x6
         tf.keras.layers.UpSampling2D(),  # 12x12
 
-        tf.keras.layers.Conv2D(filters=8, kernel_size=3, padding='valid', activation=activation, kernel_initializer=kernel_init),  # 10x10
-        tf.keras.layers.Conv2D(filters=1, kernel_size=1, padding='valid', activation=tf.keras.activations.relu, kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=8, kernel_size=3, padding='valid', activation=activation,
+                               kernel_initializer=kernel_init),  # 10x10
+        tf.keras.layers.Conv2D(filters=1, kernel_size=1, padding='valid', activation=tf.keras.activations.relu,
+                               kernel_initializer=kernel_init),
 
         tf.keras.layers.Reshape((10, 10)),
     ], name='generator')
@@ -27,21 +33,26 @@ def get_discriminator(activation, kernel_init, dropout_rate):
     discriminator = tf.keras.Sequential([
         tf.keras.layers.Reshape((10, 10, 1), input_shape=(10, 10)),
 
-        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
         tf.keras.layers.Dropout(dropout_rate),
-        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='valid', activation=activation, kernel_initializer=kernel_init),  # 8x8
+        tf.keras.layers.Conv2D(filters=16, kernel_size=3, padding='valid', activation=activation,
+                               kernel_initializer=kernel_init),  # 8x8
         tf.keras.layers.Dropout(dropout_rate),
 
         tf.keras.layers.MaxPool2D(),  # 4x4
 
-        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
         tf.keras.layers.Dropout(dropout_rate),
-        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation, kernel_initializer=kernel_init),
+        tf.keras.layers.Conv2D(filters=32, kernel_size=3, padding='same', activation=activation,
+                               kernel_initializer=kernel_init),
         tf.keras.layers.Dropout(dropout_rate),
 
         tf.keras.layers.MaxPool2D(),  # 2x2
 
-        tf.keras.layers.Conv2D(filters=64, kernel_size=2, padding='valid', activation=activation, kernel_initializer=kernel_init),  # 1x1
+        tf.keras.layers.Conv2D(filters=64, kernel_size=2, padding='valid', activation=activation,
+                               kernel_initializer=kernel_init),  # 1x1
         tf.keras.layers.Dropout(dropout_rate),
 
         tf.keras.layers.Reshape((64,)),
@@ -72,7 +83,11 @@ class BaselineModel10x10:
         self.num_disc_updates = num_disc_updates
 
         self.generator = get_generator(activation=activation, kernel_init=kernel_init, latent_dim=latent_dim)
-        self.discriminator = get_discriminator(activation=activation, kernel_init=kernel_init, dropout_rate=dropout_rate)
+        self.discriminator = get_discriminator(
+            activation=activation,
+            kernel_init=kernel_init,
+            dropout_rate=dropout_rate
+        )
 
         self.step_counter = tf.Variable(0, dtype='int32', trainable=False)
 

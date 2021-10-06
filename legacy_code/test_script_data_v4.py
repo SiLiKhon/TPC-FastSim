@@ -1,4 +1,4 @@
-import os, sys
+import sys
 import re
 from pathlib import Path
 import argparse
@@ -13,6 +13,7 @@ from models.training import train
 from models.baseline_fc_v4_8x16 import BaselineModel_8x16
 from metrics import make_metric_plots, make_histograms
 import cuda_gpu_config
+
 
 def make_parser():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
@@ -44,7 +45,7 @@ def print_args(args):
     print("----" * 10)
     print("Arguments:")
     for k, v in vars(args).items():
-        print(f"    {k} : {v}")
+        print(f"    {k}: {v}")
     print("----" * 10)
     print("")
 
@@ -75,7 +76,7 @@ def write_args(model_path, fname='arguments.txt'):
 
 
 def epoch_from_name(name):
-    epoch, = re.findall('\d+', name)
+    epoch, = re.findall(r'\d+', name)
     return int(epoch)
 
 
@@ -99,7 +100,7 @@ def load_weights(model, model_path):
     model.generator.load_weights(str(latest_gen_checkpoint))
     print(f'Loading discriminator weights from {str(latest_disc_checkpoint)}')
     model.discriminator.load_weights(str(latest_disc_checkpoint))
-    
+
     return latest_gen_checkpoint, latest_disc_checkpoint
 
 
@@ -130,11 +131,11 @@ def get_images(model,
     gen1 = np.where(gen < 1., 0, gen)
 
     features = {
-        'crossing_angle' : (X[:, 0], gen_features[:,0]),
-        'dip_angle'      : (X[:, 1], gen_features[:,1]),
-        'drift_length'   : (X[:, 2], gen_features[:,2]),
-        'time_bin_fraction' : (X[:, 2] % 1, gen_features[:,2] % 1),
-        'pad_coord_fraction' : (X[:, 3] % 1, gen_features[:,3] % 1)
+        'crossing_angle': (X[:, 0], gen_features[:, 0]),
+        'dip_angle': (X[:, 1], gen_features[:, 1]),
+        'drift_length': (X[:, 2], gen_features[:, 2]),
+        'time_bin_fraction': (X[:, 2] % 1, gen_features[:, 2] % 1),
+        'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1)
     }
 
     images = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2)
@@ -161,7 +162,7 @@ class SaveModelCallback:
         self.model = model
         self.path = path
         self.save_period = save_period
-    
+
     def __call__(self, step):
         if step % self.save_period == 0:
             print(f'Saving model on step {step} to {self.path}')
@@ -208,14 +209,15 @@ class ScheduleLRCallback:
 
 
 def evaluate_model(model, path, sample, gen_sample_name=None):
+    def array_to_img(arr):
+        return PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
+
     path.mkdir()
     (
         images, images1, img_amplitude,
         gen_dataset, chi2
     ) = get_images(model, sample=sample,
                    calc_chi2=True, return_raw_data=True, gen_more=10)
-
-    array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
 
     for k, img in images.items():
         array_to_img(img).save(str(path / f"{k}.png"))
@@ -276,7 +278,6 @@ def main():
         writer_train = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/train')
         writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
-
     if args.prediction_only:
         prediction_path = model_path / f"prediction_{epoch_from_name(latest_gen_checkpoint.stem):05d}"
         assert not prediction_path.exists(), "Prediction path already exists"
@@ -301,7 +302,6 @@ def main():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
                 return current_power
-
 
         save_model = SaveModelCallback(
             model=model, path=model_path, save_period=args.save_every

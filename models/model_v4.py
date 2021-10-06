@@ -5,6 +5,7 @@ from tensorflow.python.keras.saving import hdf5_format
 
 from . import scalers, nn
 
+
 @tf.function(experimental_relax_shapes=True)
 def preprocess_features(features):
     # features:
@@ -12,13 +13,15 @@ def preprocess_features(features):
     #   dip_angle [-60, 60]
     #   drift_length [35, 290]
     #   pad_coordinate [40-something, 40-something]
-    bin_fractions = features[:,-2:] % 1
+    bin_fractions = features[:, -2:] % 1
     features = (
-        features[:,:3] - tf.constant([[0., 0., 162.5]])
+        features[:, :3] - tf.constant([[0., 0., 162.5]])
     ) / tf.constant([[20., 60., 127.5]])
     return tf.concat([features, bin_fractions], axis=-1)
 
+
 _f = preprocess_features
+
 
 def disc_loss(d_real, d_fake):
     return tf.reduce_mean(d_fake - d_real)
@@ -31,10 +34,11 @@ def gen_loss(d_real, d_fake):
 def disc_loss_cramer(d_real, d_fake, d_fake_2):
     return -tf.reduce_mean(
         tf.norm(d_real - d_fake, axis=-1) +
-        tf.norm(d_fake_2, axis=-1) - 
+        tf.norm(d_fake_2, axis=-1) -
         tf.norm(d_fake - d_fake_2, axis=-1) -
         tf.norm(d_real, axis=-1)
     )
+
 
 def gen_loss_cramer(d_real, d_fake, d_fake_2):
     return -disc_loss_cramer(d_real, d_fake, d_fake_2)
@@ -50,6 +54,7 @@ def disc_loss_js(d_real, d_fake):
     ) + tf.reduce_sum(
         logloss(-d_fake)
     ) / (len(d_real) + len(d_fake))
+
 
 def gen_loss_js(d_real, d_fake):
     return tf.reduce_mean(
@@ -126,7 +131,6 @@ class Model_v4:
             )
             network.optimizer.set_weights(opt_weight_values)
 
-
     @tf.function
     def make_fake(self, features):
         size = tf.shape(features)[0]
@@ -136,7 +140,7 @@ class Model_v4:
         )
 
     def gradient_penalty(self, features, real, fake):
-        alpha = tf.random.uniform(shape=[len(real),] + [1] * (len(real.shape) - 1))
+        alpha = tf.random.uniform(shape=[len(real), ] + [1] * (len(real.shape) - 1))
         interpolates = alpha * real + (1 - alpha) * fake
         with tf.GradientTape() as t:
             t.watch(interpolates)
