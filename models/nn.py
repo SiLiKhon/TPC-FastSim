@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+# DO NOT REMOVE. used by code inside eval()
+import numpy as np  # noqa: F401
 
 custom_objects = {}
 
