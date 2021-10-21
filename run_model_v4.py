@@ -23,6 +23,8 @@ def make_parser():
     parser.add_argument('--checkpoint_name', type=str, required=True)
     parser.add_argument('--gpu_num', type=str, required=False)
     parser.add_argument('--prediction_only', action='store_true', default=False)
+    parser.add_argument('--titles_on', action='store_true', default=False)
+    parser.add_argument('--labels_off', action='store_true', default=False)
 
     return parser
 
@@ -117,7 +119,9 @@ def main():
                     (X_train, Y_train) if part == 'train'
                     else (X_test, Y_test)
                 ),
-                gen_sample_name=(None if part == 'train' else 'generated.dat')
+                gen_sample_name=(None if part == 'train' else 'generated.dat'),
+                titles=args.titles_on,
+                labels=(not args.labels_off)
             )
 
     else:

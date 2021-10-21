@@ -6,4 +6,4 @@ docker run -it \
   --runtime nvidia \
   -v `pwd`:`pwd` \
   silikhon/tensorflow2:v1 \
-  /bin/bash -c 'cd '`pwd`'; tensorboard --logdir=. --host=0.0.0.0 --samples_per_plugin images=100'
+  /bin/bash -c 'cd '`pwd`'; tensorboard --logdir=logs --host=0.0.0.0 --samples_per_plugin images=100'

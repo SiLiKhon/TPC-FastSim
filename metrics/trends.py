@@ -51,7 +51,8 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     return (mean, std), (mean_err, std_err)
 
 
-def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8), pdffile=None):
+def make_trend_plot(feature_real, real, feature_gen, gen, name=None, xlabel=None, ylabel=None,
+                    calc_chi2=False, figsize=(8, 8), pdffile=None):
     feature_real = feature_real.squeeze()
     feature_gen = feature_gen.squeeze()
     real = real.squeeze()
@@ -67,7 +68,12 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
     calc_trend(feature_real, real, bins=bins, label='real', color='blue')
     calc_trend(feature_gen, gen, bins=bins, label='generated', color='red')
     plt.legend()
-    plt.title(name)
+    if name is not None:
+        plt.title(name)
+    if xlabel is not None:
+        plt.xlabel(xlabel)
+    if ylabel is not None:
+        plt.ylabel(ylabel)
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')

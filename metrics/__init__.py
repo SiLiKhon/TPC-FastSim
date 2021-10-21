@@ -11,6 +11,24 @@ from .plotting import _bootstrap_error
 from .gaussian_metrics import get_val_metric_v, _METRIC_NAMES
 from .trends import make_trend_plot
 
+labels_map = {
+    'crossing_angle'     : 'Crossing angle [deg]',
+    'dip_angle'          : 'Dip angle [deg]',
+    'drift_length'       : 'Drift length [time bins]',
+    'time_bin_fraction'  : 'Drift length [time bins] mod 1',
+    'pad_coord_fraction' : 'Pad coordinate [pads] mod 1',
+
+    'Mean0'    : 'Pad CoM',
+    'Mean1'    : 'Time CoM',
+    'Sigma0^2' : 'Sq. Pad Width',
+    'Sigma1^2' : 'Sq. Time Width',
+    'Cov01'    : 'Pad-Time Covariance',
+    'Sum'      : 'Integrated amplitude'
+}
+
+def to_user_label(label):
+    return labels_map.get(label, label)
+
 
 def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy=False, pdffile=None):
     l = min(data_real.min(), data_gen.min())
@@ -35,7 +53,8 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
 
-def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False):
+def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False,
+                      titles=True, labels=False):
     plots = {}
     if make_pdfs: pdf_plots = {}
     if calc_chi2:
@@ -54,8 +73,14 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
 
 
         if features is not None:
+            kwargs = {}
+            if make_pdfs:
+                kwargs['figsize'] = (5, 5)
             for feature_name, (feature_real, feature_gen) in features.items():
                 for metric_name, real, gen in zip(_METRIC_NAMES, metric_real.T, metric_gen.T):
+                    xlabel = to_user_label(feature_name) if labels else None
+                    ylabel = to_user_label(metric_name) if labels else None
+                    title = name if titles else None
                     name = f'{metric_name} vs {feature_name}'
                     pdffile = None
                     if make_pdfs:
@@ -64,12 +89,19 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
                     if calc_chi2 and (metric_name != "Sum"):
                         plots[name], chi2_i = make_trend_plot(feature_real, real,
                                                               feature_gen, gen,
-                                                              name, calc_chi2=True,
-                                                              pdffile=pdffile)
+                                                              name=title,
+                                                              xlabel=xlabel,
+                                                              ylabel=ylabel,
+                                                              calc_chi2=True,
+                                                              pdffile=pdffile, **kwargs)
                         chi2 += chi2_i
                     else:
                         plots[name] = make_trend_plot(feature_real, real,
-                                                      feature_gen, gen, name, pdffile=pdffile)
+                                                      feature_gen, gen,
+                                                      name=title,
+                                                      xlabel=xlabel,
+                                                      ylabel=ylabel,
+                                                      pdffile=pdffile, **kwargs)
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
@@ -89,7 +121,9 @@ def make_images_for_model(model,
                           calc_chi2=False,
                           gen_more=None,
                           batch_size=128,
-                          pdf_outputs=None):
+                          pdf_outputs=None,
+                          titles=True,
+                          labels=False):
     X, Y = sample
     assert X.ndim == 2
     assert X.shape[1] == 4
@@ -123,7 +157,8 @@ def make_images_for_model(model,
     }
 
     metric_plot_results = make_metric_plots(real, gen, features=features,
-                                            calc_chi2=calc_chi2, make_pdfs=make_pdfs)
+                                            calc_chi2=calc_chi2, make_pdfs=make_pdfs,
+                                            labels=labels, titles=titles)
     images = metric_plot_results['plots']
     if calc_chi2:
         chi2 = metric_plot_results['chi2']
@@ -131,7 +166,8 @@ def make_images_for_model(model,
         images_pdf = metric_plot_results['pdf_plots']
         pdf_outputs.append(images_pdf)
 
-    metric_plot_results1 = make_metric_plots(real, gen1, features=features, make_pdfs=make_pdfs)
+    metric_plot_results1 = make_metric_plots(real, gen1, features=features, make_pdfs=make_pdfs,
+                                             labels=labels, titles=titles)
     images1 = metric_plot_results1['plots']
     if make_pdfs:
         pdf_outputs.append(metric_plot_results1['pdf_plots'])
@@ -164,14 +200,15 @@ def make_images_for_model(model,
     return result
 
 
-def evaluate_model(model, path, sample, gen_sample_name=None):
+def evaluate_model(model, path, sample, gen_sample_name=None, titles=False, labels=True):
     path.mkdir()
     pdf_outputs = []
     (
         images, images1, img_amplitude,
         gen_dataset, chi2
     ) = make_images_for_model(model, sample=sample,
-                              calc_chi2=True, return_raw_data=True, gen_more=10, pdf_outputs=pdf_outputs)
+                              calc_chi2=True, return_raw_data=True, gen_more=10, pdf_outputs=pdf_outputs,
+                              labels=labels, titles=titles)
     images_pdf, images1_pdf, img_amplitude_pdf = pdf_outputs
 
     array_to_img = lambda arr: PIL.Image.fromarray(arr.reshape(arr.shape[1:]))
