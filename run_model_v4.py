@@ -1,12 +1,9 @@
-import os, sys
 from pathlib import Path
 import shutil
 import argparse
 
-import numpy as np
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
-import PIL
 import yaml
 
 from data import preprocessing
@@ -16,6 +13,7 @@ from models.callbacks import SaveModelCallback, WriteHistSummaryCallback, Schedu
 from models.model_v4 import Model_v4
 from metrics import evaluate_model
 import cuda_gpu_config
+
 
 def make_parser():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
@@ -28,13 +26,13 @@ def make_parser():
 
 
 def print_args(args):
-    print("")
+    print()
     print("----" * 10)
     print("Arguments:")
     for k, v in vars(args).items():
         print(f"    {k} : {v}")
     print("----" * 10)
-    print("")
+    print()
 
 
 def parse_args():
@@ -47,15 +45,18 @@ def load_config(file):
     with open(file, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
-    assert (
-        (config['feature_noise_power'] is None) ==
-        (config['feature_noise_decay'] is None)
+    assert (config['feature_noise_power'] is None) == (
+        config['feature_noise_decay'] is None
     ), 'Noise power and decay must be both provided'
 
-    if 'lr_disc' not in config: config['lr_disc'] = config['lr']
-    if 'lr_gen'  not in config: config['lr_gen' ] = config['lr']
-    if 'lr_schedule_rate_disc' not in config: config['lr_schedule_rate_disc'] = config['lr_schedule_rate']
-    if 'lr_schedule_rate_gen'  not in config: config['lr_schedule_rate_gen' ] = config['lr_schedule_rate']
+    if 'lr_disc' not in config:
+        config['lr_disc'] = config['lr']
+    if 'lr_gen' not in config:
+        config['lr_gen'] = config['lr']
+    if 'lr_schedule_rate_disc' not in config:
+        config['lr_schedule_rate_disc'] = config['lr_schedule_rate']
+    if 'lr_schedule_rate_gen' not in config:
+        config['lr_schedule_rate_gen'] = config['lr_schedule_rate']
 
     return config
 
@@ -103,7 +104,6 @@ def main():
         writer_train = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/train')
         writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
-
     if args.prediction_only:
         epoch = latest_epoch(model_path)
         prediction_path = model_path / f"prediction_{epoch:05d}"
@@ -112,45 +112,51 @@ def main():
 
         for part in ['train', 'test']:
             evaluate_model(
-                model, path=prediction_path / part,
-                sample=(
-                    (X_train, Y_train) if part == 'train'
-                    else (X_test, Y_test)
-                ),
-                gen_sample_name=(None if part == 'train' else 'generated.dat')
+                model,
+                path=prediction_path / part,
+                sample=((X_train, Y_train) if part == 'train' else (X_test, Y_test)),
+                gen_sample_name=(None if part == 'train' else 'generated.dat'),
             )
 
     else:
         features_noise = None
         if config['feature_noise_power'] is not None:
+
             def features_noise(epoch):
-                current_power = config['feature_noise_power'] / (10**(epoch / config['feature_noise_decay']))
+                current_power = config['feature_noise_power'] / (10 ** (epoch / config['feature_noise_decay']))
                 with writer_train.as_default():
                     tf.summary.scalar("features noise power", current_power, epoch)
 
                 return current_power
 
-
-        save_model = SaveModelCallback(
-            model=model, path=model_path, save_period=config['save_every']
-        )
+        save_model = SaveModelCallback(model=model, path=model_path, save_period=config['save_every'])
         write_hist_summary = WriteHistSummaryCallback(
-            model, sample=(X_test, Y_test),
-            save_period=config['save_every'], writer=writer_val
+            model, sample=(X_test, Y_test), save_period=config['save_every'], writer=writer_val
         )
         schedule_lr = ScheduleLRCallback(
-            model, writer=writer_val,
+            model,
+            writer=writer_val,
             func_gen=get_scheduler(config['lr_gen'], config['lr_schedule_rate_gen']),
-            func_disc=get_scheduler(config['lr_disc'], config['lr_schedule_rate_disc'])
+            func_disc=get_scheduler(config['lr_disc'], config['lr_schedule_rate_disc']),
         )
         if continue_training:
             schedule_lr(next_epoch - 1)
 
-        train(Y_train, Y_test, model.training_step, model.calculate_losses, config['num_epochs'],
-              config['batch_size'], train_writer=writer_train, val_writer=writer_val,
-              callbacks=[schedule_lr, save_model, write_hist_summary],
-              features_train=X_train, features_val=X_test, features_noise=features_noise,
-              first_epoch=next_epoch)
+        train(
+            Y_train,
+            Y_test,
+            model.training_step,
+            model.calculate_losses,
+            config['num_epochs'],
+            config['batch_size'],
+            train_writer=writer_train,
+            val_writer=writer_val,
+            callbacks=[schedule_lr, save_model, write_hist_summary],
+            features_train=X_train,
+            features_val=X_test,
+            features_noise=features_noise,
+            first_epoch=next_epoch,
+        )
 
 
 if __name__ == '__main__':

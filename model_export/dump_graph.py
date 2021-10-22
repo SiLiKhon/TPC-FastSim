@@ -7,22 +7,28 @@ from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
 from tensorflow.python.tools import optimize_for_inference_lib
 
+
 from . import tf2xla_pb2
 
-def model_to_graph(model, preprocess, postprocess, input_signature, output_file, test_input=None,
-        hack_upsampling=False, batch_sizes=(1, 10, 100, 1000, 10000), perf_iterations=5):
+
+def model_to_graph(
+    model,
+    preprocess,
+    postprocess,
+    input_signature,
+    output_file,
+    test_input=None,
+    hack_upsampling=False,
+    batch_sizes=(1, 10, 100, 1000, 10000),
+    perf_iterations=5,
+):
     tf.keras.backend.set_learning_phase(0)
 
     @tf.function(input_signature=input_signature)
     def to_save(x):
-        return postprocess(
-            model(preprocess(x))
-        )
+        return postprocess(model(preprocess(x)))
 
-    constant_graph = \
-        convert_to_constants.convert_variables_to_constants_v2(
-            to_save.get_concrete_function()
-        )
+    constant_graph = convert_to_constants.convert_variables_to_constants_v2(to_save.get_concrete_function())
 
     if hack_upsampling:
         print("Warning: hacking upsampling operations")
@@ -30,7 +36,6 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
             if 'ResizeNearestNeighbor' == op.type:
                 op._set_attr('align_corners', attr_value_pb2.AttrValue(b=True))
                 op._set_attr('half_pixel_centers', attr_value_pb2.AttrValue(b=False))
-
 
     output_file = Path(output_file)
     path = str(output_file.parent)
@@ -40,13 +45,10 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
         constant_graph.graph.as_graph_def(),
         [i.op.name for i in constant_graph.inputs],
         [o.op.name for o in constant_graph.outputs],
-        tf.float32.as_datatype_enum
+        tf.float32.as_datatype_enum,
     )
 
-    tf.io.write_graph(
-        optimized_graph,
-        path, filename
-    )
+    tf.io.write_graph(optimized_graph, path, filename)
 
     for batch_size in batch_sizes:
         config = tf2xla_pb2.Config()
@@ -66,26 +68,19 @@ def model_to_graph(model, preprocess, postprocess, input_signature, output_file,
             f.write(str(config))
 
     if test_input is not None:
-        print(to_save(
-            tf.convert_to_tensor([test_input])
-        ))
+        print(to_save(tf.convert_to_tensor([test_input])))
 
         for batch_size in batch_sizes[::-1]:
             timings = []
             iterations = perf_iterations * max(1, 100 // batch_size)
-            for i in range(perf_iterations):
-                batched_input = tf.random.normal(
-                    shape=(batch_size, len(test_input)),
-                    dtype='float32'
-                )
+            for i in range(iterations):
+                batched_input = tf.random.normal(shape=(batch_size, len(test_input)), dtype='float32')
                 t0 = perf_counter()
-                result = to_save(batched_input).numpy()
+                to_save(batched_input).numpy()
                 t1 = perf_counter()
-                timings.append((t1 - t0) * 1000. / batch_size)
+                timings.append((t1 - t0) * 1000.0 / batch_size)
 
             timings = np.array(timings)
             mean = timings.mean()
-            err = timings.std() / (len(timings) - 1)**0.5
+            err = timings.std() / (len(timings) - 1) ** 0.5
             print(f'With batch size = {batch_size}, duration per 1 generation is: {mean} +\\- {err} ms')
-
-

@@ -1,4 +1,4 @@
-import argparse, re
+import argparse
 from pathlib import Path
 
 import tensorflow as tf
@@ -8,6 +8,7 @@ from model_export import dump_graph
 from models.model_v4 import preprocess_features, Model_v4
 from models.utils import load_weights
 from run_model_v4 import load_config
+
 
 def main():
     parser = argparse.ArgumentParser(fromfile_prefix_chars='@')
@@ -31,10 +32,6 @@ def main():
     print("----" * 10)
     print("")
 
-    def epoch_from_name(name):
-        epoch, = re.findall('\d+', name)
-        return int(epoch)
-
     model_path = Path('saved_models') / args.checkpoint_name
 
     full_model = Model_v4(load_config(model_path / 'config.yaml'))
@@ -42,11 +39,14 @@ def main():
     model = full_model.generator
 
     if args.constant_seed is None:
+
         def preprocess(x):
             size = tf.shape(x)[0]
             latent_input = tf.random.normal(shape=(size, args.latent_dim), dtype='float32')
             return tf.concat([preprocess_features(x), latent_input], axis=-1)
+
     else:
+
         def preprocess(x):
             size = tf.shape(x)[0]
             latent_input = tf.ones(shape=(size, args.latent_dim), dtype='float32') * args.constant_seed
@@ -54,13 +54,16 @@ def main():
 
     def postprocess(x):
         x = 10 ** x - 1
-        return tf.where(x < 1., 0., x)
+        return tf.where(x < 1.0, 0.0, x)
 
     dump_graph.model_to_graph(
-        model, preprocess, postprocess,
+        model,
+        preprocess,
+        postprocess,
         input_signature=[tf.TensorSpec(shape=[None, 4], dtype=tf.float32)],
-        output_file=args.output_path, test_input=args.test_input,
-        hack_upsampling=not args.dont_hack_upsampling_op
+        output_file=args.output_path,
+        test_input=args.test_input,
+        hack_upsampling=not args.dont_hack_upsampling_op,
     )
 
 

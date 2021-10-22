@@ -2,6 +2,7 @@ import os
 
 import tensorflow as tf
 
+
 def setup_gpu(gpu_num=None):
     os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
     if gpu_num is not None:

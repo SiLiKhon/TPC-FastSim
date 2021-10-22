@@ -7,6 +7,7 @@ import pandas as pd
 _THIS_PATH = Path(os.path.realpath(__file__)).parent
 _VERSION = 'data_v1'
 
+
 class Reader:
     def __init__(self, variables, types):
         assert len(variables) == len(types), 'Reader.__init__: variables and types have different length'
@@ -25,7 +26,6 @@ class Reader:
         return pd.DataFrame(self.data, columns=['evtId'] + self.vars).set_index('evtId')
 
 
-
 def raw_to_csv(fname_in=None, fname_out=None):
     if fname_in is None:
         fname_in = str(_THIS_PATH.joinpath(_VERSION, 'raw', 'digits.dat'))
@@ -38,10 +38,7 @@ def raw_to_csv(fname_in=None, fname_out=None):
     with open(fname_in, 'r') as f:
         lines = f.readlines()
 
-    reader_main = Reader(
-        variables = ['ipad', 'itime', 'amp'],
-        types     = [int   , int    , float]
-    )
+    reader_main = Reader(variables=['ipad', 'itime', 'amp'], types=[int, int, float])
 
     data_sources = [lines]
     readers = [reader_main]
@@ -50,25 +47,21 @@ def raw_to_csv(fname_in=None, fname_out=None):
         assert len(lines) % 2 == 0, 'raw_to_csv: Odd number of lines when expected even'
 
         if _VERSION == 'data_v2':
-            reader_features = Reader(
-                variables = ["crossing_angle", "dip_angle"],
-                types     = [float           , float      ]
-            )
+            reader_features = Reader(variables=["crossing_angle", "dip_angle"], types=[float, float])
         elif _VERSION == 'data_v3':
             reader_features = Reader(
-                variables = ["crossing_angle", "dip_angle", "drift_length"],
-                types     = [float           , float      , float         ]
+                variables=["crossing_angle", "dip_angle", "drift_length"], types=[float, float, float]
             )
         elif _VERSION == 'data_v4':
             reader_features = Reader(
-                variables = ["crossing_angle", "dip_angle", "drift_length", "pad_coordinate"],
-                types     = [float           , float      , float         , float           ]
+                variables=["crossing_angle", "dip_angle", "drift_length", "pad_coordinate"],
+                types=[float, float, float, float],
             )
         else:
             raise NotImplementedError
 
         lines, lines_angles = lines[1::2], lines[::2]
-        lines_angles = [' '.join(l.split()[1:]) for l in lines_angles]
+        lines_angles = [' '.join(line.split()[1:]) for line in lines_angles]
 
         data_sources = [lines, lines_angles]
         readers = [reader_main, reader_features]
@@ -76,9 +69,10 @@ def raw_to_csv(fname_in=None, fname_out=None):
     for evt_id, lines_tuple in enumerate(zip(*data_sources)):
         for r, l in zip(readers, lines_tuple):
             r.read_line(l, evt_id)
-            
+
     result = pd.concat([r.build() for r in readers], axis=1).reset_index()
     result.to_csv(fname_out, index=False)
+
 
 def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict=True):
     if filename is None:
@@ -86,7 +80,8 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
 
     df = pd.read_csv(filename)
 
-    sel = lambda df, col, limits: (df[col] >= limits[0]) & (df[col] < limits[1])
+    def sel(df, col, limits):
+        return (df[col] >= limits[0]) & (df[col] < limits[1])
 
     if 'drift_length' in df.columns:
         df['itime'] -= df['drift_length'].astype(int)
@@ -94,10 +89,7 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
     if 'pad_coordinate' in df.columns:
         df['ipad'] -= df['pad_coordinate'].astype(int)
 
-    selection = (
-        sel(df, 'itime', time_range) &
-        sel(df, 'ipad' , pad_range )
-    )
+    selection = sel(df, 'itime', time_range) & sel(df, 'ipad', pad_range)
 
     if not selection.all():
         msg = f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data!"
@@ -107,9 +99,8 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
     g = df[selection].groupby('evtId')
 
     def convert_event(event):
-        result = np.zeros(dtype=float, shape=(pad_range [1] - pad_range [0],
-                                              time_range[1] - time_range[0]))
-    
+        result = np.zeros(dtype=float, shape=(pad_range[1] - pad_range[0], time_range[1] - time_range[0]))
+
         indices = tuple(event[['ipad', 'itime']].values.T - np.array([[pad_range[0]], [time_range[0]]]))
         result[indices] = event.amp.values
 

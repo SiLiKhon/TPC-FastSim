@@ -2,6 +2,7 @@ import tensorflow as tf
 
 from metrics import make_images_for_model
 
+
 class SaveModelCallback:
     def __init__(self, model, path, save_period):
         self.model = model
@@ -11,10 +12,8 @@ class SaveModelCallback:
     def __call__(self, step):
         if step % self.save_period == 0:
             print(f'Saving model on step {step} to {self.path}')
-            self.model.generator.save(
-                str(self.path.joinpath("generator_{:05d}.h5".format(step))))
-            self.model.discriminator.save(
-                str(self.path.joinpath("discriminator_{:05d}.h5".format(step))))
+            self.model.generator.save(str(self.path.joinpath("generator_{:05d}.h5".format(step))))
+            self.model.discriminator.save(str(self.path.joinpath("discriminator_{:05d}.h5".format(step))))
 
 
 class WriteHistSummaryCallback:
@@ -26,9 +25,7 @@ class WriteHistSummaryCallback:
 
     def __call__(self, step):
         if step % self.save_period == 0:
-            images, images1, img_amplitude, chi2 = make_images_for_model(self.model,
-                                                                         sample=self.sample,
-                                                                         calc_chi2=True)
+            images, images1, img_amplitude, chi2 = make_images_for_model(self.model, sample=self.sample, calc_chi2=True)
             with self.writer.as_default():
                 tf.summary.scalar("chi2", chi2, step)
 
@@ -59,5 +56,6 @@ def get_scheduler(lr, lr_decay):
         return eval(lr_decay)
 
     def schedule_lr(step):
-        return lr * lr_decay**step
+        return lr * lr_decay ** step
+
     return schedule_lr

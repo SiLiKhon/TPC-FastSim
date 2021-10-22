@@ -38,8 +38,9 @@ def main():
 
     model_path = Path('saved_models') / args.checkpoint_name
     model_path.mkdir(parents=True)
-    model = BaselineModel10x10(kernel_init=args.kernel_init, lr=args.lr,
-                               num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim)
+    model = BaselineModel10x10(
+        kernel_init=args.kernel_init, lr=args.lr, num_disc_updates=args.num_disc_updates, latent_dim=args.latent_dim
+    )
 
     def save_model(step):
         if step % args.save_every == 0:
@@ -56,7 +57,8 @@ def main():
     writer_train = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/train')
     writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
-    unscale = lambda x: 10 ** x - 1
+    def unscale(x):
+        return 10 ** x - 1
 
     def write_hist_summary(step):
         if step % args.save_every == 0:
@@ -64,7 +66,7 @@ def main():
             real = unscale(X_test)
             gen = unscale(gen_scaled)
             gen[gen < 0] = 0
-            gen1 = np.where(gen < 1., 0, gen)
+            gen1 = np.where(gen < 1.0, 0, gen)
             images = make_metric_plots(real, gen)
             images1 = make_metric_plots(real, gen1)
 
@@ -84,9 +86,17 @@ def main():
             tf.summary.scalar("discriminator learning rate", model.disc_opt.lr, step)
             tf.summary.scalar("generator learning rate", model.gen_opt.lr, step)
 
-    train(X_train, X_test, model.training_step, model.calculate_losses, args.num_epochs, args.batch_size,
-          train_writer=writer_train, val_writer=writer_val,
-          callbacks=[write_hist_summary, save_model, schedule_lr])
+    train(
+        X_train,
+        X_test,
+        model.training_step,
+        model.calculate_losses,
+        args.num_epochs,
+        args.batch_size,
+        train_writer=writer_train,
+        val_writer=writer_val,
+        callbacks=[write_hist_summary, save_model, schedule_lr],
+    )
 
 
 if __name__ == '__main__':
