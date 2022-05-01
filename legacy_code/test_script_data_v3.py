@@ -134,7 +134,7 @@ def main():
         writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
     def unscale(x):
-        return 10 ** x - 1
+        return 10**x - 1
 
     def get_images(return_raw_data=False, calc_chi2=False, gen_more=None, sample=(X_test, Y_test), batch_size=128):
         X, Y = sample

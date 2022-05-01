@@ -53,7 +53,7 @@ def main():
             return tf.concat([preprocess_features(x), latent_input], axis=-1)
 
     def postprocess(x):
-        x = 10 ** x - 1
+        x = 10**x - 1
         return tf.where(x < 1.0, 0.0, x)
 
     dump_graph.model_to_graph(

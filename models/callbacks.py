@@ -56,6 +56,6 @@ def get_scheduler(lr, lr_decay):
         return eval(lr_decay)
 
     def schedule_lr(step):
-        return lr * lr_decay ** step
+        return lr * lr_decay**step
 
     return schedule_lr

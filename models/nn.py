@@ -170,7 +170,7 @@ def vector_img_connect_block(vector_shape, img_shape, block, vector_bypass=False
     if concat_outputs:
         outputs = tf.keras.layers.Concatenate(axis=-1)(outputs)
 
-    args = dict(inputs=[input_vec, input_img], outputs=outputs,)
+    args = dict(inputs=[input_vec, input_img], outputs=outputs)
 
     if name:
         args['name'] = name

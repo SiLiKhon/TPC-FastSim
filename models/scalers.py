@@ -16,7 +16,7 @@ class Logarithmic:
         return np.log10(1 + x)
 
     def unscale(self, x):
-        return 10 ** x - 1
+        return 10**x - 1
 
 
 class Gaussian:

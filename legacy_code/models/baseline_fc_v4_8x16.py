@@ -199,7 +199,7 @@ class BaselineModel_8x16:
         #            if self.cramer:
         #                d_real = tf.norm(d_real, axis=-1)
         grads = tf.reshape(t.gradient(d_real, real), [len(real), -1])
-        return tf.reduce_mean(tf.reduce_sum(grads ** 2, axis=-1))
+        return tf.reduce_mean(tf.reduce_sum(grads**2, axis=-1))
 
     @tf.function
     def calculate_losses(self, feature_batch, target_batch):

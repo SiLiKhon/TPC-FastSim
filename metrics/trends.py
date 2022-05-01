@@ -31,7 +31,7 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     ).T
 
     if do_plot:
-        mean_p_std_err = (mean_err ** 2 + std_err ** 2) ** 0.5
+        mean_p_std_err = (mean_err**2 + std_err**2) ** 0.5
         plt.fill_between(bin_centers, mean - mean_err, mean + mean_err, **kwargs)
         kwargs['alpha'] *= 0.5
         kwargs = {k: v for k, v in kwargs.items() if k != 'label'}
@@ -78,11 +78,11 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
 
         gen_upper = gen_mean + gen_std
         gen_lower = gen_mean - gen_std
-        gen_err2 = gen_mean_err ** 2 + gen_std_err ** 2
+        gen_err2 = gen_mean_err**2 + gen_std_err**2
 
         real_upper = real_mean + real_std
         real_lower = real_mean - real_std
-        real_err2 = real_mean_err ** 2 + real_std_err ** 2
+        real_err2 = real_mean_err**2 + real_std_err**2
 
         chi2 = ((gen_upper - real_upper) ** 2 / (gen_err2 + real_err2)).sum() + (
             (gen_lower - real_lower) ** 2 / (gen_err2 + real_err2)
