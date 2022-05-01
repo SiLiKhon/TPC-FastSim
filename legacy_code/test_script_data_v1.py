@@ -58,7 +58,7 @@ def main():
     writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
 
     def unscale(x):
-        return 10 ** x - 1
+        return 10**x - 1
 
     def write_hist_summary(step):
         if step % args.save_every == 0:

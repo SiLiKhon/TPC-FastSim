@@ -31,7 +31,7 @@ writer_val = tf.summary.create_file_writer('logs/baseline_10x10_normed/validatio
 
 
 def unscale(x):
-    return 10 ** x - 1
+    return 10**x - 1
 
 
 def write_hist_summary(step):

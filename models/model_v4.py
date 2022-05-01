@@ -145,7 +145,7 @@ class Model_v4:
             d_real = self.discriminator([_f(features), real])
 
         grads = tf.reshape(t.gradient(d_real, real), [len(real), -1])
-        return tf.reduce_mean(tf.reduce_sum(grads ** 2, axis=-1))
+        return tf.reduce_mean(tf.reduce_sum(grads**2, axis=-1))
 
     @tf.function
     def calculate_losses(self, feature_batch, target_batch):
