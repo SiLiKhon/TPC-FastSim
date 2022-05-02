@@ -21,6 +21,7 @@ def make_parser():
     parser.add_argument('--checkpoint_name', type=str, required=True)
     parser.add_argument('--gpu_num', type=str, required=False)
     parser.add_argument('--prediction_only', action='store_true', default=False)
+    parser.add_argument('--logging_dir', type=str, default='logs')
 
     return parser
 
@@ -101,8 +102,8 @@ def main():
     Y_train, Y_test, X_train, X_test = train_test_split(data_scaled, features, test_size=0.25, random_state=42)
 
     if not args.prediction_only:
-        writer_train = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/train')
-        writer_val = tf.summary.create_file_writer(f'logs/{args.checkpoint_name}/validation')
+        writer_train = tf.summary.create_file_writer(f'{args.logging_dir}/{args.checkpoint_name}/train')
+        writer_val = tf.summary.create_file_writer(f'{args.logging_dir}/{args.checkpoint_name}/validation')
 
     if args.prediction_only:
         epoch = latest_epoch(model_path)
