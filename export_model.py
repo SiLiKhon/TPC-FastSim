@@ -96,6 +96,7 @@ def main():
             mlflow.set_tracking_uri(args.mlflow_url)
             mlflow.set_experiment('model_export')
 
+            mlflow.log_artifact(str(model_path / 'config.yaml'), artifact_path='model_onnx')
             mlflow.onnx.log_model(onnx_model, artifact_path='model_onnx', registered_model_name=args.mlflow_model_name)
 
 
