@@ -13,4 +13,4 @@ def setup_gpu(gpu_num=None):
         tf.config.experimental.set_memory_growth(gpu, True)
 
     logical_devices = tf.config.experimental.list_logical_devices('GPU')
-    assert len(logical_devices) > 0, "Not enough GPU hardware devices available"
+    assert len(logical_devices) > 0 or gpu_num == "", "Not enough GPU hardware devices available"
