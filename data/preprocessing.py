@@ -103,8 +103,10 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
     anti_g = df[anti_selection].groupby('evtId')
 
     if not selection.all():
-        msg = f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data" \
-        f" ({len(anti_g)} events)!"
+        msg = (
+            f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data"
+            f" ({len(anti_g)} events)!"
+        )
         assert not strict, msg
         print(msg)
 
