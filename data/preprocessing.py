@@ -6,6 +6,8 @@ import pandas as pd
 
 _THIS_PATH = Path(os.path.realpath(__file__)).parent
 _VERSION = 'data_v1'
+_V4PLUS_VAR_NAMES = ["crossing_angle", "dip_angle", "drift_length", "pad_coordinate", "row", "pT"]
+_V4PLUS_VAR_TYPES = [float, float, float, float, int, float]
 
 
 class Reader:
@@ -57,6 +59,11 @@ def raw_to_csv(fname_in=None, fname_out=None):
                 variables=["crossing_angle", "dip_angle", "drift_length", "pad_coordinate"],
                 types=[float, float, float, float],
             )
+        elif _VERSION == 'data_v4plus':
+            reader_features = Reader(
+                variables=_V4PLUS_VAR_NAMES,
+                types=_V4PLUS_VAR_TYPES,
+            )
         else:
             raise NotImplementedError
 
@@ -74,7 +81,7 @@ def raw_to_csv(fname_in=None, fname_out=None):
     result.to_csv(fname_out, index=False)
 
 
-def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict=True):
+def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict=True, misc_out=None):
     if filename is None:
         filename = str(_THIS_PATH.joinpath(_VERSION, 'csv', 'digits.csv'))
 
@@ -90,13 +97,16 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
         df['ipad'] -= df['pad_coordinate'].astype(int)
 
     selection = sel(df, 'itime', time_range) & sel(df, 'ipad', pad_range)
+    g = df[selection].groupby('evtId')
+    bad_ids = df[~selection]['evtId'].unique()
+    anti_selection = df['evtId'].apply(lambda x: x in bad_ids)
+    anti_g = df[anti_selection].groupby('evtId')
 
     if not selection.all():
-        msg = f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data!"
+        msg = f"WARNING: current selection ignores {(~selection).sum() / len(selection) * 100}% of the data" \
+        f" ({len(anti_g)} events)!"
         assert not strict, msg
         print(msg)
-
-    g = df[selection].groupby('evtId')
 
     def convert_event(event):
         result = np.zeros(dtype=float, shape=(pad_range[1] - pad_range[0], time_range[1] - time_range[0]))
@@ -107,6 +117,14 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
         return result
 
     data = np.stack(g.apply(convert_event).values)
+    anti_data = None
+    if not selection.all() and misc_out is not None:
+        assert isinstance(misc_out, dict)
+        pad_range = [df[anti_selection]["ipad"].min(), df[anti_selection]["ipad"].max() + 1]
+        time_range = [df[anti_selection]["itime"].min(), df[anti_selection]["itime"].max() + 1]
+        anti_data = np.stack(anti_g.apply(convert_event).values)
+        misc_out["anti_data"] = anti_data
+        misc_out["bad_ids"] = bad_ids
 
     if 'crossing_angle' in df.columns:
         features = ['crossing_angle', 'dip_angle']
@@ -114,7 +132,13 @@ def read_csv_2d(filename=None, pad_range=(40, 50), time_range=(265, 280), strict
             features += ['drift_length']
         if 'pad_coordinate' in df.columns:
             features += ['pad_coordinate']
-        assert (g[features].std() == 0).all().all(), 'Varying features within same events...'
+        if "row" in df.columns:
+            features += ["row"]
+        if "pT" in df.columns:
+            features += ["pT"]
+        assert (
+            (g[features].std() == 0).all(axis=1) | (g[features].size() == 1)
+        ).all(), 'Varying features within same events...'
         return data, g[features].mean().values
 
     return data
