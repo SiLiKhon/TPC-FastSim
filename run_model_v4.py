@@ -93,8 +93,11 @@ def main():
         next_epoch = load_weights(model, model_path) + 1
 
     preprocessing._VERSION = model.data_version
-    data, features = preprocessing.read_csv_2d(pad_range=model.pad_range, time_range=model.time_range)
+    data, features = preprocessing.read_csv_2d(pad_range=model.pad_range, time_range=model.time_range, strict=False)
     features = features.astype('float32')
+    if features.shape[1] > 4:
+        print(f">>> WARNING! Ignoring {features.shape[1] - 4} features.")
+        features = features[:,:4]
 
     data_scaled = model.scaler.scale(data).astype('float32')
 
