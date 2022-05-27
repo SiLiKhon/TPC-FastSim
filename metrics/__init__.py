@@ -86,7 +86,10 @@ def make_images_for_model(
 ):
     X, Y = sample
     assert X.ndim == 2
-    assert X.shape[1] == 4
+    if model.data_version == 'data_v4plus':
+        assert X.shape[1] == 6
+    else:
+        assert X.shape[1] == 4
     make_pdfs = pdf_outputs is not None
     if make_pdfs:
         assert isinstance(pdf_outputs, list)
@@ -112,6 +115,8 @@ def make_images_for_model(
         'time_bin_fraction': (X[:, 2] % 1, gen_features[:, 2] % 1),
         'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1),
     }
+    if model.data_version == 'data_v4plus' and model.include_pT_for_evaluation:
+        features['pT'] = (X[:,5], gen_features[:,5])
 
     metric_plot_results = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2, make_pdfs=make_pdfs)
     images = metric_plot_results['plots']
