@@ -11,14 +11,24 @@ from .trends import make_trend_plot
 mpl.use("Agg")
 
 
-def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy=False, pdffile=None):
+def make_histograms(
+    data_real,
+    data_gen,
+    title,
+    figsize=(8, 8),
+    n_bins=100,
+    logy=False,
+    pdffile=None,
+    label_real='real',
+    label_gen='generated',
+):
     left = min(data_real.min(), data_gen.min())
     right = max(data_real.max(), data_gen.max())
     bins = np.linspace(left, right, n_bins + 1)
 
     fig = plt.figure(figsize=figsize)
-    plt.hist(data_real, bins=bins, density=True, label='real')
-    plt.hist(data_gen, bins=bins, density=True, label='generated', alpha=0.7)
+    plt.hist(data_real, bins=bins, density=True, label=label_real)
+    plt.hist(data_gen, bins=bins, density=True, label=label_gen, alpha=0.7)
     if logy:
         plt.yscale('log')
     plt.legend()
@@ -35,7 +45,9 @@ def make_histograms(data_real, data_gen, title, figsize=(8, 8), n_bins=100, logy
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
 
-def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False):
+def make_metric_plots(
+    images_real, images_gen, features=None, calc_chi2=False, make_pdfs=False, label_real='real', label_gen='generated'
+):
     plots = {}
     if make_pdfs:
         pdf_plots = {}
@@ -51,7 +63,7 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
             if make_pdfs:
                 pdffile = io.BytesIO()
                 pdf_plots[name] = pdffile
-            plots[name] = make_histograms(real, gen, name, pdffile=pdffile)
+            plots[name] = make_histograms(real, gen, name, pdffile=pdffile, label_real=label_real, label_gen=label_gen)
 
         if features is not None:
             for feature_name, (feature_real, feature_gen) in features.items():
@@ -63,11 +75,28 @@ def make_metric_plots(images_real, images_gen, features=None, calc_chi2=False, m
                         pdf_plots[name] = pdffile
                     if calc_chi2 and (metric_name != "Sum"):
                         plots[name], chi2_i = make_trend_plot(
-                            feature_real, real, feature_gen, gen, name, calc_chi2=True, pdffile=pdffile
+                            feature_real,
+                            real,
+                            feature_gen,
+                            gen,
+                            name,
+                            calc_chi2=True,
+                            pdffile=pdffile,
+                            label_real=label_real,
+                            label_gen=label_gen,
                         )
                         chi2 += chi2_i
                     else:
-                        plots[name] = make_trend_plot(feature_real, real, feature_gen, gen, name, pdffile=pdffile)
+                        plots[name] = make_trend_plot(
+                            feature_real,
+                            real,
+                            feature_gen,
+                            gen,
+                            name,
+                            pdffile=pdffile,
+                            label_real=label_real,
+                            label_gen=label_gen,
+                        )
 
     except AssertionError as e:
         print(f"WARNING! Assertion error ({e})")
@@ -202,7 +231,7 @@ def evaluate_model(model, path, sample, gen_sample_name=None):
         f.write(f"{chi2:.2f}\n")
 
 
-def plot_individual_images(real, gen, n=10, pdffile=None):
+def plot_individual_images(real, gen, n=10, pdffile=None, label_real='real', label_gen='generated'):
     assert real.ndim == 3 == gen.ndim
     assert real.shape[1:] == gen.shape[1:]
     N_max = min(len(real), len(gen))
@@ -220,10 +249,10 @@ def plot_individual_images(real, gen, n=10, pdffile=None):
 
     for ax, img_real, img_fake in zip(axx, real, gen):
         ax[0].imshow(img_real, aspect='auto')
-        ax[0].set_title("real")
+        ax[0].set_title(label_real)
         ax[0].axis('off')
         ax[1].imshow(img_fake, aspect='auto')
-        ax[1].set_title('generated')
+        ax[1].set_title(label_gen)
         ax[1].axis('off')
 
     buf = io.BytesIO()
@@ -237,7 +266,7 @@ def plot_individual_images(real, gen, n=10, pdffile=None):
     return np.array(img.getdata(), dtype=np.uint8).reshape(1, img.size[1], img.size[0], -1)
 
 
-def plot_images_mask(real, gen, pdffile=None):
+def plot_images_mask(real, gen, pdffile=None, label_real='real', label_gen='generated'):
     assert real.ndim == 3 == gen.ndim
     assert real.shape[1:] == gen.shape[1:]
 
@@ -246,9 +275,9 @@ def plot_images_mask(real, gen, pdffile=None):
 
     fig, [ax0, ax1] = plt.subplots(2, 1, figsize=(size_x, size_y))
     ax0.imshow((real >= 1.0).any(axis=0), aspect='auto')
-    ax0.set_title("real")
+    ax0.set_title(label_real)
     ax1.imshow((gen >= 1.0).any(axis=0), aspect='auto')
-    ax1.set_title("generated")
+    ax1.set_title(label_gen)
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png')

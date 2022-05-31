@@ -59,7 +59,7 @@ def raw_to_csv(fname_in=None, fname_out=None):
                 variables=["crossing_angle", "dip_angle", "drift_length", "pad_coordinate"],
                 types=[float, float, float, float],
             )
-        elif _VERSION == 'data_v4plus':
+        elif (_VERSION == 'data_v4plus') or (_VERSION == 'data_v4plus_shortFixedPt'):
             reader_features = Reader(
                 variables=_V4PLUS_VAR_NAMES,
                 types=_V4PLUS_VAR_TYPES,

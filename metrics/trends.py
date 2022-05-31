@@ -43,7 +43,18 @@ def calc_trend(x, y, do_plot=True, bins=100, window_size=20, **kwargs):
     return (mean, std), (mean_err, std_err)
 
 
-def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False, figsize=(8, 8), pdffile=None):
+def make_trend_plot(
+    feature_real,
+    real,
+    feature_gen,
+    gen,
+    name,
+    calc_chi2=False,
+    figsize=(8, 8),
+    pdffile=None,
+    label_real='real',
+    label_gen='generated',
+):
     feature_real = feature_real.squeeze()
     feature_gen = feature_gen.squeeze()
     real = real.squeeze()
@@ -52,8 +63,8 @@ def make_trend_plot(feature_real, real, feature_gen, gen, name, calc_chi2=False,
     bins = np.linspace(min(feature_real.min(), feature_gen.min()), max(feature_real.max(), feature_gen.max()), 100)
 
     fig = plt.figure(figsize=figsize)
-    calc_trend(feature_real, real, bins=bins, label='real', color='blue')
-    calc_trend(feature_gen, gen, bins=bins, label='generated', color='red')
+    calc_trend(feature_real, real, bins=bins, label=label_real, color='blue')
+    calc_trend(feature_gen, gen, bins=bins, label=label_gen, color='red')
     plt.legend()
     plt.title(name)
 
