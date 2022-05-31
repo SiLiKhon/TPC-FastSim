@@ -30,7 +30,7 @@ def preprocess_features_v4plus(features):
     bin_fractions = features[:, 2:4] % 1
     features_1 = (features[:, :3] - tf.constant([[0.0, 0.0, 162.5]])) / tf.constant([[20.0, 60.0, 127.5]])
     features_2 = tf.cast(features[:, 4:5] >= 27, tf.float32)
-    features_3 = features[:, 5:] / 2.5
+    features_3 = features[:, 5:6] / 2.5
     return tf.concat([features_1, features_2, features_3, bin_fractions], axis=-1)
 
 

@@ -116,7 +116,7 @@ def make_images_for_model(
         'pad_coord_fraction': (X[:, 3] % 1, gen_features[:, 3] % 1),
     }
     if model.data_version == 'data_v4plus' and model.include_pT_for_evaluation:
-        features['pT'] = (X[:,5], gen_features[:,5])
+        features['pT'] = (X[:, 5], gen_features[:, 5])
 
     metric_plot_results = make_metric_plots(real, gen, features=features, calc_chi2=calc_chi2, make_pdfs=make_pdfs)
     images = metric_plot_results['plots']
