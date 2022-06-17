@@ -4,9 +4,10 @@ lr: 1.e-4
 lr_schedule_rate: 0.999
 
 num_disc_updates: 8
-gp_lambda: 10.
+gp_lambda: 50.
 gpdata_lambda: 0.
 cramer: False
+js: True
 stochastic_stepping: True
 
 save_every: 50
