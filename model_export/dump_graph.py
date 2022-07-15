@@ -7,7 +7,7 @@ from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
 from tensorflow.python.tools import optimize_for_inference_lib
 
-from model_export import tf2xla_pb2
+from . import tf2xla_pb2
 
 
 def model_to_graph(
