@@ -14,4 +14,8 @@ RUN pip3 install jupyterlab==1.2.6 \
                  seaborn==0.10.0 \
                  scipy==1.4.1 \
                  Pillow==7.0.0 \
-                 PyYAML==5.3
+                 PyYAML==5.3 \
+                 tf2onnx==1.9.2 \
+                 mlflow==1.24.0 \
+                 onnxruntime==1.10.0 \
+                 boto3==1.21.21

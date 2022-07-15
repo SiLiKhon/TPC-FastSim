@@ -7,15 +7,11 @@ from tensorflow.python.framework import convert_to_constants
 from tensorflow.core.framework import attr_value_pb2
 from tensorflow.python.tools import optimize_for_inference_lib
 
-
-from . import tf2xla_pb2
+from model_export import tf2xla_pb2
 
 
 def model_to_graph(
     model,
-    preprocess,
-    postprocess,
-    input_signature,
     output_file,
     test_input=None,
     hack_upsampling=False,
@@ -24,11 +20,7 @@ def model_to_graph(
 ):
     tf.keras.backend.set_learning_phase(0)
 
-    @tf.function(input_signature=input_signature)
-    def to_save(x):
-        return postprocess(model(preprocess(x)))
-
-    constant_graph = convert_to_constants.convert_variables_to_constants_v2(to_save.get_concrete_function())
+    constant_graph = convert_to_constants.convert_variables_to_constants_v2(model.get_concrete_function())
 
     if hack_upsampling:
         print("Warning: hacking upsampling operations")
@@ -68,7 +60,7 @@ def model_to_graph(
             f.write(str(config))
 
     if test_input is not None:
-        print(to_save(tf.convert_to_tensor([test_input])))
+        print(model(tf.convert_to_tensor([test_input])))
 
         for batch_size in batch_sizes[::-1]:
             timings = []
@@ -76,7 +68,7 @@ def model_to_graph(
             for i in range(iterations):
                 batched_input = tf.random.normal(shape=(batch_size, len(test_input)), dtype='float32')
                 t0 = perf_counter()
-                to_save(batched_input).numpy()
+                model(batched_input).numpy()
                 t1 = perf_counter()
                 timings.append((t1 - t0) * 1000.0 / batch_size)
 
