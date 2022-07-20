@@ -1,6 +1,7 @@
 import os
 import argparse
 import tensorflow as tf
+import numpy as np
 import tf2onnx
 
 from pathlib import Path
@@ -20,7 +21,7 @@ def main():
 
     parser.add_argument('--latent_space', choices=['normal', 'uniform', 'constant', 'none'], default='normal')
     parser.add_argument('--latent_dim', type=int, default=32, required=False)
-    parser.add_argument('--constant_latent', type=float, default=None)
+    parser.add_argument('--constant_latent', type=float, default=0.5)
 
     parser.add_argument('--export_format', choices=['pbtxt', 'onnx'], default='pbtxt')
 
@@ -87,6 +88,14 @@ def main():
             output_path=Path(args.output_path) / f'{args.checkpoint_name}.onnx',
         )
 
+        if args.test_input:
+            test_output = to_save(tf.convert_to_tensor([args.test_input]))
+            print('Model test output:')
+            print('Input:')
+            print(args.test_input)
+            print('Output')
+            print(*(f'{num:.4f}' if num > 1e-16 else 0 for num in test_output.numpy().flatten()))
+
         if args.upload_to_mlflow:
             import mlflow
 
@@ -113,6 +122,11 @@ def construct_preprocess(args):
 
         def latent_input_gen(batch_size):
             return tf.random.uniform(shape=(batch_size, args.latent_dim), dtype='float32')
+
+    elif args.latent_space == 'constant':
+
+        def latent_input_gen(batch_size):
+            return tf.fill(dims=(batch_size, args.latent_dim), value=np.float32(args.constant_latent))
 
     if latent_input_gen is None:
         input_signature = [tf.TensorSpec(shape=[predefined_batch_size, 36], dtype=tf.float32)]
