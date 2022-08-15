@@ -38,7 +38,7 @@ In case you run everything on your local machine, it should be sufficient to jus
 ```bash
 tensorboard --logdir=logs/
 ```
-This should start a server that's going to be accessible via http://localhost:6006/ in your browser locally. If your run everything on a remote machine accessed via SSH, you'll also need to make use of the SSH port forwarding to be able to acces the server on your local machine web browser. This can be done with the `-L <LOCAL_PORT>:<HOST>:<PORT>` SSH option, which forwards all local connections to the `<LOCAL_PORT>` to the `<HOST>:<PORT>` from the remote machine. For example, you can make an SSH connection to your `REMOTE_MACHINE` with:
+This should start a server that's going to be accessible via http://localhost:6006/ in your browser locally. If you run everything on a remote machine accessed via SSH, you'll also need to make use of the SSH port forwarding to be able to acces the server on your local machine web browser. This can be done with the `-L <LOCAL_PORT>:<HOST>:<PORT>` SSH option, which forwards all local connections to the `<LOCAL_PORT>` to the `<HOST>:<PORT>` from the remote machine. For example, you can make an SSH connection to your `REMOTE_MACHINE` with:
 ```bash
 ssh -L 4321:localhost:6006 username@REMOTE_MACHINE
 ```
