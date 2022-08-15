@@ -113,19 +113,23 @@ def construct_preprocess(args, func):
     predefined_batch_size = None if args.export_format == 'pbtxt' else 1
 
     if args.latent_space == 'normal':
+
         def latent_input_gen(batch_size):
             return tf.random.normal(shape=(batch_size, args.latent_dim), dtype='float32')
+
     elif args.latent_space == 'uniform':
+
         def latent_input_gen(batch_size):
             return tf.random.uniform(shape=(batch_size, args.latent_dim), dtype='float32')
+
     elif args.latent_space == 'constant':
-        raise NotImplementedError() # TODO: implement this
+        raise NotImplementedError()  # TODO: implement this
 
     if latent_input_gen is None:
         input_signature = [tf.TensorSpec(shape=[predefined_batch_size, 36], dtype=tf.float32)]
 
         def preprocess(x):
-            return tf.concat([func(x[..., :args.features_dim]), x[..., args.features_dim:]], axis=-1)
+            return tf.concat([func(x[..., : args.features_dim]), x[..., args.features_dim :]], axis=-1)
 
     else:
         input_signature = [tf.TensorSpec(shape=[predefined_batch_size, args.features_dim], dtype=tf.float32)]
