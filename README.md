@@ -7,7 +7,7 @@ The code was tested with python 3.6. The minimal set of packages is present in `
 ```bash
 yum -y install python3-3.6.8-18.el7
 python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements_minimal.txt
+python3 -m pip install --prefer-binary -r requirements_minimal.txt
 ```
 
 ## Runing the training and/or evaluation of the model
