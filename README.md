@@ -45,3 +45,12 @@ ssh -L 4321:localhost:6006 username@REMOTE_MACHINE
 after which opening http://localhost:4321/ in your browser locally would be forwarded through SSH as if you opened http://localhost:6006/ on `REMOTE_MACHINE`. The port 6006 is the default TensorBoard port, but it can be configured to be any other using the `--port` argument of the `tensorboard`.
 
 Once you configure (if necessary) the port forwarding, start the TensorBoard server and access it through the web browser, you should see a page with two tabs: `SCALARS` and `IMAGES`. The `SCALARS` tab contains the generator and discriminator losses, along with a quantity called `chi2`. This `chi2` quantity is a sum of squared discrepancy-over-error terms, where discrepancies are calculated between the data and model prediction for the upper and lower bands in each bin of profiles like Fig.3 from [Eur. Phys. J. C 81, 599 (2021)](https://doi.org/10.1140/epjc/s10052-021-09366-4) (excluding the amplitude profiles). The `chi2` quantity is not technically a chi-squared due to the correlations between different terms, but it does reflect the overall agreement of the model (the lower `chi2` the better). The `IMAGES` tab should contain validation histograms and profiles and example responses generated.
+
+
+## Model export (ONNX format)
+
+To export a trained model in ONNX format, run:
+```bash
+python3 export_model.py --checkpoint_name test_run --export_format onnx
+```
+Here `test_run` is the `CHECKPOINT_NAME` used in examples above. This creates a file `model_export/onnx/CHECKPOINT_NAME.onnx` containing the model graph and weights.
