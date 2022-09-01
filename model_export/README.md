@@ -10,7 +10,7 @@ The `setup_centos.sh` script (`model_export/setup_centos.sh`) contains all the e
 
 *Note: this was only tested in a clean CentOS environment (in the docker container above), there might be conflicts with the main environment used for model training and evaluation.*
 
-The `setup_centos.sh` script also creates a symlink to the `model_export/model_v4` folder and puts it into `tensorflow`. This folder contains bazel build instructions and needs to be inside the `tensorflow` directory to be built.
+The `setup_centos.sh` script also creates a symlink to the `model_export/model_v4` folder (which should contain the `*.pbtxt` files describing the exported model) and puts it into `tensorflow`. This folder contains bazel build instructions and needs to be inside the `tensorflow` directory to be built.
 ```bash
 ./setup_centos.sh
 ```
@@ -23,7 +23,7 @@ cd tensorflow/
 # rest options to default
 BAZEL_LINKLIBS=-l%:libstdc++.a bazel build --local_resources 30000,15,1.0 -c opt model_v4:all_models
 ```
-The `--local_resources` parameter from the last line allows to limit the resources to be used by bazel. 30000 is memory in megabytes, 15 is the number of CPU cores and 1.0 is the I/O capability. Not limiting the resources may result in a compiler crash.
+The `--local_resources` parameter from the last line allows to limit the resources to be used by bazel. 30000 is memory in megabytes, 15 is the number of CPU cores and 1.0 is the I/O capability. Not limiting the resources may result in a compiler crash. To further rebuild the model (e.g., after updating the `*.pbtxt` files) only the last command is needed.
 
 # Test:
 ```bash

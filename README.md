@@ -54,3 +54,22 @@ To export a trained model in ONNX format, run:
 python3 export_model.py --checkpoint_name test_run --export_format onnx
 ```
 Here `test_run` is the `CHECKPOINT_NAME` used in examples above. This creates a file `model_export/onnx/CHECKPOINT_NAME.onnx` containing the model graph and weights.
+
+## Model export (XLA format)
+
+To export a trained model in XLA format (compiled `.so`), run:
+```bash
+python3 export_model.py --checkpoint_name test_run --export_format pbtxt
+```
+Here `test_run` is the `CHECKPOINT_NAME` used in examples above. This creates protobuf files describing the model:
+```
+graph.pbtxt
+graph-1.config.pbtxt
+graph-10.config.pbtxt
+graph-100.config.pbtxt
+graph-1000.config.pbtxt
+graph-10000.config.pbtxt
+```
+and puts them into `model_export/model_v4/` directory (previously created such files would get overwritten). The `graph.pbtxt` contains the frozen computation graph of the model with all the weight values. Files `graph-X.pbtxt` specify additional configuration for model build target - input and output tensor names and shapes (the number `X` standing for the batch size).
+
+After exporting the model graph in protobuf format, please follow [these instructions](model_export/README.md) to build the model `.so` files.
