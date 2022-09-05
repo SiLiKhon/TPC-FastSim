@@ -2,7 +2,7 @@ docker run -it \
   --rm \
   -u $(id -u):$(id -g) \
   --env HOME=`pwd` \
-  --runtime nvidia \
+  --gpus all \
   -v `pwd`:`pwd` \
-  silikhon/tensorflow2:v1 \
+  alexdrydew/tpc-trainer \
   /bin/bash

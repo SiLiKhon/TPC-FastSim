@@ -1,0 +1,55 @@
+
+\documentclass[11pt,a4paper,english]{article}
+\RequirePackage[T1]{fontenc}
+\RequirePackage{graphicx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage[dvipsnames]{xcolor}
+
+\begin{document}
+
+\begingroup
+\tiny
+\setlength{\tabcolsep}{0pt}
+\begin{tabular}{>{\raggedleft}m{.035\textwidth}>{\centering}m{.19\textwidth}>{\centering}m{.19\textwidth}>{\centering}m{.19\textwidth}>{\centering}m{.19\textwidth}>{\centering\arraybackslash}m{.19\textwidth}>{\centering\arraybackslash}m{.19\textwidth}}
+{\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Pad barycenter}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean0_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean0_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean0_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean0_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean0_vs_pad_coord_fraction.pdf}} \\ {\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Time barycenter}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean1_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean1_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean1_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean1_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Mean1_vs_pad_coord_fraction.pdf}} \\ {\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Sq. Pad Width}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma0-2_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma0-2_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma0-2_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma0-2_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma0-2_vs_pad_coord_fraction.pdf}} \\ {\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Sq. Time Width}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma1-2_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma1-2_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma1-2_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma1-2_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sigma1-2_vs_pad_coord_fraction.pdf}} \\ {\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Pad-Time Covariance}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Cov01_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Cov01_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Cov01_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Cov01_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Cov01_vs_pad_coord_fraction.pdf}} \\ {\rotatebox[origin=c]{90}{\parbox{.18\textwidth}{\centering Integrated amplitude}}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sum_vs_crossing_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sum_vs_dip_angle.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sum_vs_drift_length.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sum_vs_time_bin_fraction.pdf}} &
+\raisebox{-.5\height}{\includegraphics[width=.18\textwidth,trim=0 10 35 30,clip]{Sum_vs_pad_coord_fraction.pdf}} \\
+~ &
+\hspace{10pt}\parbox{.15\textwidth}{\centering Crossing angle [deg]} &
+\hspace{10pt}\parbox{.15\textwidth}{\centering Dip angle [deg]} &
+\hspace{10pt}\parbox{.15\textwidth}{\centering Drift length [time bins]} &
+\hspace{10pt}\parbox{.15\textwidth}{\centering Drift length fraction} &
+\hspace{10pt}\parbox{.15\textwidth}{\centering Pad coordinate fraction}
+\end{tabular}
+\endgroup
+
+\end{document}

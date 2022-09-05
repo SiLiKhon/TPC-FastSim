@@ -10,7 +10,7 @@ docker run -it \
   -u $(id -u):$(id -g) \
   --env HOME=`pwd` \
   -p 127.0.0.1:$PORT:8888/tcp \
-  --runtime nvidia \
+  --gpus all \
   -v `pwd`:`pwd` \
-  silikhon/tensorflow2:v1 \
+  alexdrydew/tpc-trainer \
   /bin/bash -c 'cd '`pwd`'; jupyter lab --ip=0.0.0.0 --allow-root'
